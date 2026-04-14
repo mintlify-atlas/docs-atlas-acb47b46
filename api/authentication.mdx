@@ -1,0 +1,124 @@
+---
+title: "Authenticate requests to the Ghostfolio API"
+description: "Get a Bearer token from your security token or API key, then pass it in the Authorization header to authenticate Ghostfolio REST API requests."
+---
+
+Every protected endpoint in the Ghostfolio REST API requires a Bearer token in the `Authorization` request header. This page explains how to obtain a token and which endpoints are accessible without one.
+
+## Authorization header format
+
+Pass your token with every authenticated request:
+
+```
+Authorization: Bearer eyJh...
+```
+
+The value after `Bearer ` is your JWT token. There is no session management on your end — include the header on every request.
+
+## Authentication methods
+
+### Security token (anonymous login)
+
+Each Ghostfolio account has a security token visible in **My Ghostfolio → Settings**. Exchange it for a short-lived JWT by calling `POST /api/v1/auth/anonymous`.
+
+<Steps>
+  <Step title="Find your security token">
+    Open Ghostfolio, navigate to **My Ghostfolio → Settings**, and copy the security token shown for your account.
+  </Step>
+  <Step title="Request a Bearer token">
+    Send a `POST` request with your security token in the request body:
+
+    ```bash
+    curl -X POST http://localhost:3333/api/v1/auth/anonymous \
+      -H "Content-Type: application/json" \
+      -d '{"accessToken": "YOUR_SECURITY_TOKEN"}'
+    ```
+
+    <ParamField body="accessToken" type="string" required>
+      The security token from your Ghostfolio account settings.
+    </ParamField>
+
+    A successful response returns the JWT:
+
+    ```json
+    {
+      "authToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    }
+    ```
+
+    <ResponseField name="authToken" type="string" required>
+      The JWT Bearer token to include in subsequent API requests.
+    </ResponseField>
+  </Step>
+  <Step title="Use the Bearer token">
+    Include the returned `authToken` value in the `Authorization` header for all subsequent requests:
+
+    ```bash
+    curl http://localhost:3333/api/v1/portfolio/details \
+      -H "Authorization: Bearer YOUR_JWT_TOKEN"
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+  The `GET /api/v1/auth/anonymous/:accessToken` endpoint is deprecated. Use the `POST` form shown above instead.
+</Warning>
+
+### API key
+
+You can generate a long-lived API key from **My Ghostfolio → Settings**. Use it directly as the Bearer token value — no exchange step is needed.
+
+```bash
+curl http://localhost:3333/api/v1/portfolio/details \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+API keys are useful for automated scripts and integrations where exchanging a security token on each run is impractical.
+
+### Google OAuth
+
+If your account was created by signing in with Google, authentication is handled through the Google OAuth flow in the Ghostfolio web application. The resulting JWT is then available in your session for API use. Programmatic Google OAuth flows are outside the scope of this reference.
+
+## Code examples
+
+<CodeGroup>
+
+```bash Get Bearer token
+curl -X POST http://localhost:3333/api/v1/auth/anonymous \
+  -H "Content-Type: application/json" \
+  -d '{"accessToken": "YOUR_SECURITY_TOKEN"}'
+```
+
+```bash Use Bearer token
+curl http://localhost:3333/api/v1/portfolio/details \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+```bash Use API key
+curl http://localhost:3333/api/v1/portfolio/details \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+</CodeGroup>
+
+## Public endpoints
+
+The following endpoints do not require a Bearer token:
+
+| Endpoint | Description |
+|---|---|
+| `GET /api/v1/health` | Health check — returns `{ "status": "OK" }` when the API is healthy |
+| `GET /api/v1/public/:accessId/portfolio` | Public portfolio — requires the account owner to have granted _Public_ access in **My Ghostfolio → Access** |
+
+<Note>
+  To enable the public portfolio endpoint, the account owner must go to **My Ghostfolio → Access** and create an access grant of type _Public_. The resulting `accessId` is then used in the URL.
+</Note>
+
+## Authentication errors
+
+| Status | Meaning |
+|---|---|
+| `401 Unauthorized` | No `Authorization` header was provided, or the token is malformed |
+| `403 Forbidden` | The token is valid but the security token does not match any account, or the account lacks permission for the requested resource |
+
+If you receive a `401`, confirm the header is formatted exactly as `Authorization: Bearer <token>` with no extra whitespace or quotes around the token value.

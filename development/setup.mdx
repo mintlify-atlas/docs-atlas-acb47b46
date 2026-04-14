@@ -1,0 +1,199 @@
+---
+title: "Set up the Ghostfolio development environment"
+description: "Step-by-step guide to running Ghostfolio locally with Node.js 22, Docker Compose, PostgreSQL, Redis, Prisma, and the Angular client dev server."
+---
+
+Getting Ghostfolio running on your local machine takes about ten minutes. The stack consists of a NestJS API server, an Angular client, a PostgreSQL database, and a Redis cache — all wired together through an Nx monorepo. Docker handles the infrastructure services, while Node.js runs both the client and server in watch mode.
+
+## Prerequisites
+
+Before you begin, install the following tools:
+
+- **[Docker](https://www.docker.com/products/docker-desktop)** — used to run PostgreSQL and Redis locally
+- **[Node.js](https://nodejs.org/en/download) 22 or later** — required by the `engines` field in `package.json`
+
+<Warning>
+  Node.js versions below 22 are not supported. Run `node --version` to confirm before proceeding.
+</Warning>
+
+## Setup
+
+<Steps>
+  <Step title="Clone the repository">
+    Clone the Ghostfolio repository and navigate into it:
+
+    ```bash
+    git clone https://github.com/ghostfolio/ghostfolio.git
+    cd ghostfolio
+    ```
+  </Step>
+
+  <Step title="Install dependencies">
+    Install all Node.js dependencies. The `postinstall` script automatically generates the Prisma client:
+
+    ```bash
+    npm install
+    ```
+  </Step>
+
+  <Step title="Configure environment variables">
+    Copy the development environment template and fill in your values:
+
+    ```bash
+    cp .env.dev .env
+    ```
+
+    Open `.env` in your editor and populate the required variables. Key variables include:
+
+    | Variable | Description |
+    |---|---|
+    | `ACCESS_TOKEN_SALT` | A random string used as salt for access tokens |
+    | `DATABASE_URL` | PostgreSQL connection URL |
+    | `JWT_SECRET_KEY` | A random string used for JSON Web Tokens |
+    | `POSTGRES_DB` | PostgreSQL database name |
+    | `POSTGRES_PASSWORD` | PostgreSQL password |
+    | `POSTGRES_USER` | PostgreSQL username |
+    | `REDIS_HOST` | Hostname where Redis is running |
+    | `REDIS_PASSWORD` | Redis password |
+    | `REDIS_PORT` | Port where Redis is running |
+  </Step>
+
+  <Step title="Start PostgreSQL and Redis">
+    Bring up the development infrastructure with Docker Compose:
+
+    ```bash
+    docker compose -f docker/docker-compose.dev.yml up -d
+    ```
+
+    This starts a PostgreSQL instance and a Redis instance in the background.
+  </Step>
+
+  <Step title="Initialize the database">
+    Push the Prisma schema to the database and seed it with initial data:
+
+    ```bash
+    npm run database:setup
+    ```
+
+    This runs `database:push` (to sync the schema) followed by `database:seed` (to populate seed data).
+  </Step>
+
+  <Step title="Start the server">
+    <Tabs>
+      <Tab title="Serve mode">
+        Run the NestJS API server with file watching:
+
+        ```bash
+        npm run start:server
+        ```
+
+        The API listens on port `3333` by default.
+      </Tab>
+      <Tab title="Debug mode">
+        Build in watch mode for use with the VS Code debugger:
+
+        ```bash
+        npm run watch:server
+        ```
+
+        Then click **Debug API** in Visual Studio Code to attach the debugger.
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Start the client">
+    In a second terminal, start the Angular development server in English (the default locale):
+
+    ```bash
+    npm run start:client
+    ```
+
+    To start in a different language, edit `package.json` and change `--configuration=development-en` to the desired locale code (for example, `development-de` for German). Then run `npm run start:client` and open `https://localhost:4200/de`.
+  </Step>
+
+  <Step title="Open the application">
+    Open **[https://localhost:4200/en](https://localhost:4200/en)** in your browser. Click **Get Started** to register the first user, who automatically receives the `ADMIN` role.
+  </Step>
+</Steps>
+
+<Note>
+  The client uses HTTPS on localhost. If your browser shows a certificate warning, see the [SSL certificate section](#ssl-certificate-for-localhost) below.
+</Note>
+
+## Running tests
+
+Run the full test suite (API and common library tests):
+
+```bash
+npm test
+```
+
+The `test` script runs `test:api` and `test:common` in sequence, both using the `.env.example` file for environment variables via `dotenv-cli`.
+
+<CodeGroup>
+
+```bash API tests only
+npm run test:api
+```
+
+```bash Common library tests only
+npm run test:common
+```
+
+```bash Single test file
+npm run test:single
+```
+
+</CodeGroup>
+
+## Storybook component library
+
+Ghostfolio ships a Storybook instance for the shared UI components in `libs/ui`. Start it locally with:
+
+```bash
+npm run start:storybook
+```
+
+The published Storybook is also available at [https://ghostfol.io/development/storybook](https://ghostfol.io/development/storybook).
+
+## Database operations
+
+### Sync schema changes
+
+After editing `prisma/schema.prisma`, push the changes directly to the database without creating a migration file (suitable for prototyping):
+
+```bash
+npm run database:push
+```
+
+### Create a migration
+
+When you are ready to commit a schema change as a versioned migration:
+
+```bash
+npm run prisma migrate dev --name describe_your_change
+```
+
+### Open Prisma Studio
+
+Launch the Prisma Studio GUI to browse and edit your local database:
+
+```bash
+npm run database:gui
+```
+
+Prisma Studio opens at [https://localhost:5555](https://localhost:5555). To open it against a production database, use `npm run database:gui:prod`.
+
+## SSL certificate for localhost
+
+The Angular dev server is configured to use HTTPS. If you need to generate a self-signed certificate for `localhost`, run:
+
+```bash
+openssl req -x509 -newkey rsa:2048 -nodes \
+  -keyout apps/client/localhost.pem \
+  -out apps/client/localhost.cert \
+  -days 365 \
+  -subj "/C=CH/ST=State/L=City/O=Organization/OU=Unit/CN=localhost"
+```
+
+This generates `localhost.cert` and `localhost.pem` files inside `apps/client/`.

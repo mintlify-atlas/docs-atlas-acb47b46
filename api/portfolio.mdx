@@ -1,0 +1,452 @@
+---
+title: "Portfolio endpoints — performance, holdings, analysis"
+description: "REST API endpoints for querying portfolio details, holdings, performance metrics, dividends, investments, and static risk analysis in Ghostfolio."
+---
+
+The portfolio endpoints give you read access to your wealth data — from a high-level performance summary down to individual holding breakdowns. All endpoints require a valid JWT Bearer token unless noted otherwise. An optional impersonation header (`X-Impersonation-Id`) lets you read another user's portfolio if they have granted you access.
+
+---
+
+## GET /api/v1/portfolio/details
+
+Returns a full breakdown of the portfolio including holdings, accounts, platforms, market allocation, and a summary. Premium-tier subscribers receive additional detail such as currency, sectors, countries, and market data per holding.
+
+### Query parameters
+
+<ParamField query="range" type="string" default="max">
+  Date range for the portfolio snapshot. Accepted values: `1d`, `wtd`, `mtd`, `ytd`, `1y`, `5y`, `max`, or a four-digit year such as `2023`.
+</ParamField>
+
+<ParamField query="accounts" type="string">
+  Comma-separated list of account IDs to filter by.
+</ParamField>
+
+<ParamField query="assetClasses" type="string">
+  Comma-separated asset classes to include. Enum values: `COMMODITY`, `EQUITY`, `FIXED_INCOME`, `LIQUIDITY`, `REAL_ESTATE`.
+</ParamField>
+
+<ParamField query="dataSource" type="string">
+  Filter holdings by data source. Enum values: `ALPHA_VANTAGE`, `COINGECKO`, `EOD_HISTORICAL_DATA`, `FINANCIAL_MODELING_PREP`, `GHOSTFOLIO`, `GOOGLE_SHEETS`, `MANUAL`, `RAPID_API`, `YAHOO`.
+</ParamField>
+
+<ParamField query="symbol" type="string">
+  Filter to a single ticker symbol, e.g. `MSFT`.
+</ParamField>
+
+<ParamField query="tags" type="string">
+  Comma-separated tag IDs to filter by.
+</ParamField>
+
+<ParamField query="withMarkets" type="string" default="false">
+  Set to `true` to include market allocation objects (`markets`, `marketsAdvanced`) in the response.
+</ParamField>
+
+### Response
+
+<ResponseField name="holdings" type="object">
+  Map of symbol to position detail.
+  <Expandable title="holding properties">
+    <ResponseField name="currency" type="string">ISO 4217 currency code for the holding.</ResponseField>
+    <ResponseField name="investment" type="number">Total amount invested in base currency.</ResponseField>
+    <ResponseField name="valueInBaseCurrency" type="number">Current market value in base currency.</ResponseField>
+    <ResponseField name="valueInPercentage" type="number">Share of total portfolio value (0–1).</ResponseField>
+    <ResponseField name="assetClass" type="string">Asset class enum value.</ResponseField>
+    <ResponseField name="assetSubClass" type="string">Asset sub-class enum value.</ResponseField>
+    <ResponseField name="countries" type="object[]">Country allocation breakdown (Premium).</ResponseField>
+    <ResponseField name="sectors" type="object[]">Sector allocation breakdown (Premium).</ResponseField>
+    <ResponseField name="markets" type="object">Regional market breakdown (Premium).</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="accounts" type="object">
+  Map of account name to aggregated value.
+</ResponseField>
+
+<ResponseField name="platforms" type="object">
+  Map of platform name to aggregated value.
+</ResponseField>
+
+<ResponseField name="markets" type="object">
+  High-level geographic allocation: `developedMarkets`, `emergingMarkets`, `otherMarkets`, and `UNKNOWN`.
+</ResponseField>
+
+<ResponseField name="marketsAdvanced" type="object">
+  Detailed geographic allocation: `asiaPacific`, `emergingMarkets`, `europe`, `japan`, `northAmerica`, `otherMarkets`, `UNKNOWN`.
+</ResponseField>
+
+<ResponseField name="summary" type="object">
+  Aggregate portfolio financials (nullified in restricted view).
+  <Expandable title="summary properties">
+    <ResponseField name="currentNetWorth" type="number">Net worth in base currency.</ResponseField>
+    <ResponseField name="currentValueInBaseCurrency" type="number">Total market value.</ResponseField>
+    <ResponseField name="totalInvestment" type="number">Total cost basis.</ResponseField>
+    <ResponseField name="netPerformance" type="number">Absolute net gain/loss.</ResponseField>
+    <ResponseField name="grossPerformance" type="number">Absolute gross gain/loss.</ResponseField>
+    <ResponseField name="dividendInBaseCurrency" type="number">Total dividends received.</ResponseField>
+    <ResponseField name="fees" type="number">Total fees paid.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="hasError" type="boolean">
+  `true` if any holding data could not be resolved.
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+  ISO 8601 timestamp of when the portfolio was first created.
+</ResponseField>
+
+### Example
+
+<CodeGroup>
+
+```bash curl
+curl -X GET "https://yourdomain.com/api/v1/portfolio/details?range=ytd&withMarkets=true" \
+  -H "Authorization: Bearer <token>"
+```
+
+</CodeGroup>
+
+---
+
+## GET /api/v1/portfolio/holdings
+
+Returns a flat array of all current holdings. Supports the same filter parameters as `/portfolio/details`.
+
+### Query parameters
+
+<ParamField query="range" type="string" default="max">
+  Date range. Same values as `/portfolio/details`.
+</ParamField>
+
+<ParamField query="accounts" type="string">
+  Filter by account IDs (comma-separated).
+</ParamField>
+
+<ParamField query="assetClasses" type="string">
+  Filter by asset class.
+</ParamField>
+
+<ParamField query="dataSource" type="string">
+  Filter by data source.
+</ParamField>
+
+<ParamField query="holdingType" type="string">
+  Filter by holding type.
+</ParamField>
+
+<ParamField query="query" type="string">
+  Free-text search query applied to holding names and symbols.
+</ParamField>
+
+<ParamField query="symbol" type="string">
+  Filter to a single symbol.
+</ParamField>
+
+<ParamField query="tags" type="string">
+  Filter by tag IDs (comma-separated).
+</ParamField>
+
+### Response
+
+<ResponseField name="holdings" type="object[]">
+  Array of position objects. Each item contains the same fields as a single entry in the `holdings` map returned by `/portfolio/details`.
+</ResponseField>
+
+### Example
+
+<CodeGroup>
+
+```bash curl
+curl -X GET "https://yourdomain.com/api/v1/portfolio/holdings?assetClasses=EQUITY" \
+  -H "Authorization: Bearer <token>"
+```
+
+</CodeGroup>
+
+---
+
+## GET /api/v1/portfolio/holding/:dataSource/:symbol
+
+Returns detailed data for a single holding identified by its data source and ticker symbol.
+
+### Path parameters
+
+<ParamField path="dataSource" type="string" required>
+  The data source for the symbol. Enum values: `ALPHA_VANTAGE`, `COINGECKO`, `EOD_HISTORICAL_DATA`, `FINANCIAL_MODELING_PREP`, `GHOSTFOLIO`, `GOOGLE_SHEETS`, `MANUAL`, `RAPID_API`, `YAHOO`.
+</ParamField>
+
+<ParamField path="symbol" type="string" required>
+  The ticker symbol, e.g. `MSFT` or `bitcoin`.
+</ParamField>
+
+### Response
+
+Returns a `PortfolioHoldingResponse` object with the full detail for the specified holding.
+
+### Error codes
+
+| Code | Meaning |
+|------|---------|
+| `404` | Holding not found for the authenticated user. |
+
+---
+
+## GET /api/v1/portfolio/performance
+
+Returns time-series performance data and summary metrics for the portfolio. This endpoint is versioned at `v2`.
+
+<Note>
+  In ZEN mode or restricted-view mode, absolute monetary values are nullified and only percentage-based metrics are returned.
+</Note>
+
+### Query parameters
+
+<ParamField query="range" type="string" default="max">
+  Date range. Same values as `/portfolio/details`.
+</ParamField>
+
+<ParamField query="accounts" type="string">
+  Filter by account IDs (comma-separated).
+</ParamField>
+
+<ParamField query="assetClasses" type="string">
+  Filter by asset class.
+</ParamField>
+
+<ParamField query="dataSource" type="string">
+  Filter by data source.
+</ParamField>
+
+<ParamField query="symbol" type="string">
+  Filter to a single symbol.
+</ParamField>
+
+<ParamField query="tags" type="string">
+  Filter by tag IDs (comma-separated).
+</ParamField>
+
+<ParamField query="withExcludedAccounts" type="string" default="false">
+  Set to `true` to include accounts that are marked as excluded.
+</ParamField>
+
+### Response
+
+<ResponseField name="chart" type="object[]">
+  Daily time-series data points.
+  <Expandable title="chart item properties">
+    <ResponseField name="date" type="string">ISO 8601 date string.</ResponseField>
+    <ResponseField name="netPerformanceInPercentage" type="number">Net return as a percentage.</ResponseField>
+    <ResponseField name="netPerformanceInPercentageWithCurrencyEffect" type="number">Net return including currency effects.</ResponseField>
+    <ResponseField name="totalInvestment" type="number">Cumulative investment at this date.</ResponseField>
+    <ResponseField name="value" type="number">Portfolio market value at this date.</ResponseField>
+    <ResponseField name="netWorth" type="number">Net worth at this date.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="performance" type="object">
+  Summary performance metrics.
+  <Expandable title="performance properties">
+    <ResponseField name="currentNetWorth" type="number">Current net worth in base currency.</ResponseField>
+    <ResponseField name="currentValueInBaseCurrency" type="number">Current total market value.</ResponseField>
+    <ResponseField name="grossPerformance" type="number">Gross absolute gain/loss.</ResponseField>
+    <ResponseField name="grossPerformanceWithCurrencyEffect" type="number">Gross gain/loss including currency effects.</ResponseField>
+    <ResponseField name="netPerformance" type="number">Net absolute gain/loss.</ResponseField>
+    <ResponseField name="netPerformanceWithCurrencyEffect" type="number">Net gain/loss including currency effects.</ResponseField>
+    <ResponseField name="totalInvestment" type="number">Total amount invested.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example
+
+<CodeGroup>
+
+```bash curl
+curl -X GET "https://yourdomain.com/api/v2/portfolio/performance?range=ytd" \
+  -H "Authorization: Bearer <token>"
+```
+
+</CodeGroup>
+
+---
+
+## GET /api/v1/portfolio/report
+
+Returns a static analysis report highlighting potential portfolio risks and rule violations such as concentration, currency exposure, and diversification gaps.
+
+<Note>
+  On Basic subscription tiers, all rule results are nullified and only aggregate statistics are returned.
+</Note>
+
+### Response
+
+<ResponseField name="rules" type="object">
+  Map of rule name to rule evaluation result. Each result contains whether the rule is fulfilled and a descriptive message.
+</ResponseField>
+
+<ResponseField name="statistics" type="object">
+  <Expandable title="statistics properties">
+    <ResponseField name="rulesActiveCount" type="number">Total number of active rules evaluated.</ResponseField>
+    <ResponseField name="rulesFulfilledCount" type="number">Number of rules currently passing.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example
+
+<CodeGroup>
+
+```bash curl
+curl -X GET "https://yourdomain.com/api/v1/portfolio/report" \
+  -H "Authorization: Bearer <token>"
+```
+
+</CodeGroup>
+
+---
+
+## GET /api/v1/portfolio/dividends
+
+Returns dividend income over time, optionally grouped by a time period.
+
+### Query parameters
+
+<ParamField query="range" type="string" default="max">
+  Date range filter.
+</ParamField>
+
+<ParamField query="groupBy" type="string">
+  Aggregation period. Enum values: `month`, `year`.
+</ParamField>
+
+<ParamField query="accounts" type="string">
+  Filter by account IDs (comma-separated).
+</ParamField>
+
+<ParamField query="assetClasses" type="string">
+  Filter by asset class.
+</ParamField>
+
+<ParamField query="dataSource" type="string">
+  Filter by data source.
+</ParamField>
+
+<ParamField query="symbol" type="string">
+  Filter to a single symbol.
+</ParamField>
+
+<ParamField query="tags" type="string">
+  Filter by tag IDs (comma-separated).
+</ParamField>
+
+### Response
+
+<ResponseField name="dividends" type="object[]">
+  Array of dividend data points.
+  <Expandable title="dividend item properties">
+    <ResponseField name="date" type="string">ISO 8601 date string for the period.</ResponseField>
+    <ResponseField name="investment" type="number">Dividend amount in base currency for this period.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+---
+
+## GET /api/v1/portfolio/investments
+
+Returns the history of invested capital over time and savings streak metrics.
+
+### Query parameters
+
+<ParamField query="range" type="string" default="max">
+  Date range filter.
+</ParamField>
+
+<ParamField query="groupBy" type="string">
+  Aggregation period. Enum values: `month`, `year`.
+</ParamField>
+
+<ParamField query="accounts" type="string">
+  Filter by account IDs (comma-separated).
+</ParamField>
+
+<ParamField query="assetClasses" type="string">
+  Filter by asset class.
+</ParamField>
+
+<ParamField query="dataSource" type="string">
+  Filter by data source.
+</ParamField>
+
+<ParamField query="symbol" type="string">
+  Filter to a single symbol.
+</ParamField>
+
+<ParamField query="tags" type="string">
+  Filter by tag IDs (comma-separated).
+</ParamField>
+
+### Response
+
+<ResponseField name="investments" type="object[]">
+  Time-series array of investment amounts.
+  <Expandable title="investment item properties">
+    <ResponseField name="date" type="string">ISO 8601 date string for the period.</ResponseField>
+    <ResponseField name="investment" type="number">Cumulative invested amount at this date in base currency.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="streaks" type="object">
+  Savings streak counters.
+  <Expandable title="streak properties">
+    <ResponseField name="currentStreak" type="number">Number of consecutive periods with a new investment.</ResponseField>
+    <ResponseField name="longestStreak" type="number">All-time longest savings streak.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+---
+
+## PUT /api/v1/portfolio/holding/:dataSource/:symbol/tags
+
+Updates the tags associated with a holding. Requires the `updateOrder` permission.
+
+### Path parameters
+
+<ParamField path="dataSource" type="string" required>
+  The data source for the symbol.
+</ParamField>
+
+<ParamField path="symbol" type="string" required>
+  The ticker symbol.
+</ParamField>
+
+### Request body
+
+<ParamField body="tags" type="object[]" required>
+  Array of tag objects to assign to the holding. Replaces all existing tags.
+  <Expandable title="tag properties">
+    <ResponseField name="id" type="string">Tag UUID.</ResponseField>
+    <ResponseField name="name" type="string">Tag label.</ResponseField>
+  </Expandable>
+</ParamField>
+
+### Response
+
+Returns `204 No Content` on success.
+
+### Error codes
+
+| Code | Meaning |
+|------|---------|
+| `404` | Holding not found. |
+| `403` | Insufficient permissions. |
+
+### Example
+
+<CodeGroup>
+
+```bash curl
+curl -X PUT "https://yourdomain.com/api/v1/portfolio/holding/YAHOO/MSFT/tags" \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"tags": [{"id": "tag-uuid", "name": "Tech"}]}'
+```
+
+</CodeGroup>

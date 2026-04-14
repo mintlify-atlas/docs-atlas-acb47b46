@@ -1,0 +1,108 @@
+{
+  "projectType": "saas",
+  "projectName": "Ghostfolio",
+  "projectDescription": "Open source wealth management software for tracking stocks, ETFs, and cryptocurrencies with portfolio analytics, multi-account management, and a public REST API.",
+  "theme": "almond",
+  "primaryColor": "#35cccc",
+  "lightColor": "#7ededd",
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "self-hosting"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/portfolio",
+              "features/activities",
+              "features/accounts",
+              "features/markets"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/environment-variables",
+              "configuration/data-providers",
+              "configuration/authentication"
+            ]
+          },
+          {
+            "group": "Development",
+            "pages": [
+              "development/setup",
+              "development/architecture",
+              "development/contributing"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api/overview",
+              "api/authentication"
+            ]
+          },
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api/portfolio",
+              "api/activities",
+              "api/accounts",
+              "api/user",
+              "api/admin"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Portfolio performance tracking (ROAI, WTD, MTD, YTD, 1Y, 5Y, Max)",
+    "Multi-account management across brokerages and exchanges",
+    "Transaction import and export (BUY, SELL, DIVIDEND, FEE, INTEREST, ITEM, LIABILITY)",
+    "Static portfolio risk analysis and diversification insights",
+    "Support for stocks, ETFs, cryptocurrencies, and custom assets",
+    "Multiple data providers (Yahoo Finance, CoinGecko, Alpha Vantage, and more)",
+    "Dark Mode, Zen Mode, and Progressive Web App (PWA)",
+    "Public portfolio sharing with access controls",
+    "Self-hosting via Docker with PostgreSQL and Redis",
+    "REST API with JWT and API key authentication"
+  ],
+  "publicApiSurface": [
+    "POST /api/v1/auth/anonymous",
+    "GET /api/v1/health",
+    "GET /api/v1/portfolio/details",
+    "GET /api/v1/portfolio/holdings",
+    "GET /api/v1/portfolio/performance",
+    "GET /api/v1/portfolio/report",
+    "GET /api/v1/portfolio/dividends",
+    "GET /api/v1/portfolio/investments",
+    "POST /api/v1/import",
+    "GET /api/v1/export",
+    "GET /api/v1/order",
+    "POST /api/v1/order",
+    "PUT /api/v1/order/:id",
+    "DELETE /api/v1/order/:id",
+    "GET /api/v1/account",
+    "POST /api/v1/account",
+    "GET /api/v1/user",
+    "PUT /api/v1/user/setting",
+    "GET /api/v1/public/:accessId/portfolio",
+    "GET /api/v1/admin",
+    "GET /api/v1/symbol/:dataSource/:symbol"
+  ]
+}

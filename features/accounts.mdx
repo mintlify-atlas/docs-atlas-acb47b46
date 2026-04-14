@@ -1,0 +1,95 @@
+---
+title: 'Multi-account portfolio management'
+description: 'Create and manage multiple brokerage accounts in Ghostfolio with per-account currency, platform linking, balance history, and portfolio exclusion controls.'
+---
+
+Ghostfolio lets you manage all your investment accounts in one place. Whether you trade through multiple brokerages, hold assets on cryptocurrency exchanges, or maintain separate accounts for tax purposes, you can model each account individually and see how they contribute to your overall portfolio.
+
+<CardGroup cols={2}>
+  <Card title="Multiple accounts" icon="building-columns">
+    Create a separate account for each brokerage, exchange, or investment vehicle you use.
+  </Card>
+  <Card title="Platform linking" icon="link">
+    Associate accounts with a named platform (broker or exchange) to group and visualize holdings by provider.
+  </Card>
+  <Card title="Balance tracking" icon="scale-balanced">
+    Record a cash balance for each account and track how that balance changes over time.
+  </Card>
+  <Card title="Exclusion flag" icon="eye-slash">
+    Exclude specific accounts from portfolio totals while keeping their activities visible.
+  </Card>
+</CardGroup>
+
+## Creating an account
+
+<Steps>
+  <Step title="Open account settings">
+    Navigate to **My Ghostfolio** and select the **Accounts** section, or go to **Settings → Accounts**.
+  </Step>
+  <Step title="Add a new account">
+    Click **Add account**. The account creation dialog opens.
+  </Step>
+  <Step title="Enter account details">
+    Fill in the account name and select its base currency. You can also add an optional comment for your own reference.
+  </Step>
+  <Step title="Select a platform (optional)">
+    Choose an existing platform from the dropdown to link this account to a brokerage or exchange. If the platform does not exist yet, create it first (see [Platforms](#platforms) below).
+  </Step>
+  <Step title="Save">
+    Click **Save**. The account is now available when recording activities and appears in the Allocations view.
+  </Step>
+</Steps>
+
+## Editing and deleting accounts
+
+To edit an account, click the account row and update the fields in the edit dialog. All changes take effect immediately.
+
+To delete an account, it must have no activities assigned to it. If the account has existing activities, reassign or delete those activities first, then delete the account.
+
+<Warning>
+Deleting an account is permanent. Make sure no activities are linked to it before proceeding.
+</Warning>
+
+## Platforms
+
+A **platform** represents a financial institution, brokerage, or exchange where you hold accounts. Examples include Interactive Brokers, Coinbase, or Vanguard.
+
+Linking an account to a platform enables the **By Platform** proportion chart in the Allocations view, which shows how much of your portfolio is held at each provider. This makes it easy to spot concentration risk at the brokerage level.
+
+Platforms are managed separately from accounts. Each platform has a name and a URL. You can create platforms in **Settings → Platforms** (admin users) and then select them when creating or editing accounts.
+
+<Info>
+One platform can be linked to multiple accounts. For example, if you have both a taxable brokerage account and an ISA at the same broker, you can link both to the same platform.
+</Info>
+
+## Account currency and multi-currency support
+
+Each account has its own base currency. When you record activities in that account, Ghostfolio uses the account currency as the default transaction currency.
+
+Ghostfolio converts all account values to your personal **base currency** (set in your user settings) for portfolio-level aggregation. Exchange rates are applied automatically using historical rate data, so performance figures correctly reflect both asset returns and currency effects.
+
+The **Allocations → By Currency** chart shows the full breakdown of your exposure across currencies, helping you monitor foreign exchange concentration risk.
+
+## Account balances
+
+In addition to holding invested securities, each account can carry a **cash balance**. This represents uninvested cash sitting in the account, such as dividends received but not yet reinvested, or funds deposited but not yet deployed.
+
+You can record and update an account balance manually from the account detail view. Ghostfolio stores a history of balance entries (the `AccountBalance` model), so you can track how your cash position has changed over time.
+
+<Tip>
+You can transfer a balance between two accounts using the **Transfer balance** action. This records a debit from one account and a credit to the other without creating investment activities.
+</Tip>
+
+The current balance of each account is reflected in the portfolio summary as part of your total net worth calculation, unless the account is excluded (see below).
+
+## Excluding accounts from portfolio totals
+
+Setting the **Exclude from portfolio** flag on an account removes it from all portfolio-level calculations, including total value, performance metrics, and allocation charts. The account and its activities remain in the system, but they do not influence your headline figures.
+
+This is useful for accounts you want to track passively — for example, a pension account managed by an employer that you cannot freely trade, or an account belonging to another family member that you are tracking for convenience.
+
+<Note>
+Excluded accounts are visible in the accounts list and their activities appear in the Activities tab, but they are filtered out of portfolio summaries and the Allocations breakdown.
+</Note>
+
+To exclude an account, open the account edit dialog and enable the **Exclude from portfolio** toggle, then save.

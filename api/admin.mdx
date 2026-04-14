@@ -1,0 +1,388 @@
+---
+title: "Admin API — platform management endpoints"
+description: "Admin-only REST API endpoints for platform oversight, user management, market data control, asset profile administration, and data gathering queue management."
+---
+
+The admin endpoints provide privileged access to platform-level operations including user management, market data gathering, asset profile maintenance, and platform settings. Every endpoint on this page requires the `ADMIN` role.
+
+<Warning>
+  All endpoints documented here are restricted to users with the `ADMIN` role. Requests from any other role will receive a `403 Forbidden` response.
+</Warning>
+
+---
+
+## GET /api/v1/admin
+
+Returns a high-level overview of the Ghostfolio platform including aggregated statistics, system health, and configuration details.
+
+### Response
+
+<ResponseField name="exchangeRates" type="object[]">
+  Current exchange rates used for base currency conversion.
+</ResponseField>
+
+<ResponseField name="info" type="object">
+  Platform information including version, counts of users and activities, and feature flags.
+</ResponseField>
+
+<ResponseField name="settings" type="object">
+  Current platform-wide property settings.
+</ResponseField>
+
+### Example
+
+<CodeGroup>
+
+```bash curl
+curl -X GET "https://yourdomain.com/api/v1/admin" \
+  -H "Authorization: Bearer <admin-token>"
+```
+
+</CodeGroup>
+
+---
+
+## GET /api/v1/admin/user
+
+Returns a paginated list of all registered users on the platform.
+
+### Query parameters
+
+<ParamField query="skip" type="number">
+  Number of users to skip for pagination.
+</ParamField>
+
+<ParamField query="take" type="number">
+  Maximum number of users to return.
+</ParamField>
+
+### Response
+
+<ResponseField name="users" type="object[]">
+  Array of user summary objects.
+  <Expandable title="user properties">
+    <ResponseField name="id" type="string">UUID of the user.</ResponseField>
+    <ResponseField name="role" type="string">User role: `USER`, `ADMIN`, `DEMO`, or `INACTIVE`.</ResponseField>
+    <ResponseField name="provider" type="string">Auth provider: `ANONYMOUS`, `GOOGLE`, or `INTERNET_IDENTITY`.</ResponseField>
+    <ResponseField name="createdAt" type="string">ISO 8601 account creation timestamp.</ResponseField>
+    <ResponseField name="activityCount" type="number">Total number of activities for this user.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example
+
+<CodeGroup>
+
+```bash curl
+curl -X GET "https://yourdomain.com/api/v1/admin/user?skip=0&take=20" \
+  -H "Authorization: Bearer <admin-token>"
+```
+
+</CodeGroup>
+
+---
+
+## GET /api/v1/admin/market-data
+
+Returns a filterable, paginated list of all symbol market data entries stored in the platform.
+
+### Query parameters
+
+<ParamField query="presetId" type="string">
+  Apply a named preset filter for market data. Values correspond to `MarketDataPreset` enum entries.
+</ParamField>
+
+<ParamField query="assetSubClasses" type="string">
+  Comma-separated asset sub-class filter values, e.g. `ETF,STOCK`.
+</ParamField>
+
+<ParamField query="query" type="string">
+  Free-text search applied to symbol names.
+</ParamField>
+
+<ParamField query="sortColumn" type="string">
+  Column to sort by.
+</ParamField>
+
+<ParamField query="sortDirection" type="string">
+  Sort direction. Values: `asc`, `desc`.
+</ParamField>
+
+<ParamField query="skip" type="number">
+  Number of records to skip for pagination.
+</ParamField>
+
+<ParamField query="take" type="number">
+  Maximum number of records to return.
+</ParamField>
+
+### Response
+
+Returns an `AdminMarketData` object containing a paginated list of market data entries with their associated symbol profiles.
+
+---
+
+## GET /api/v1/admin/demo-user/sync
+
+Synchronises the demo user account to its predefined state. Useful for resetting the demo user's portfolio to a known baseline. Requires the `syncDemoUserAccount` permission.
+
+### Response
+
+Returns a `BatchPayload` object with a `count` field indicating the number of records affected.
+
+---
+
+## POST /api/v1/admin/gather
+
+Triggers a 7-day data gathering job for all active symbols in the background. Returns immediately while gathering proceeds asynchronously.
+
+### Example
+
+<CodeGroup>
+
+```bash curl
+curl -X POST "https://yourdomain.com/api/v1/admin/gather" \
+  -H "Authorization: Bearer <admin-token>"
+```
+
+</CodeGroup>
+
+---
+
+## POST /api/v1/admin/gather/max
+
+Triggers a full historical data gathering job for all active asset profiles. All active symbols are enqueued at medium priority. Returns immediately while gathering proceeds asynchronously.
+
+### Example
+
+<CodeGroup>
+
+```bash curl
+curl -X POST "https://yourdomain.com/api/v1/admin/gather/max" \
+  -H "Authorization: Bearer <admin-token>"
+```
+
+</CodeGroup>
+
+---
+
+## POST /api/v1/admin/gather/profile-data
+
+Enqueues asset profile data gathering jobs for all currently active symbols. Profile data includes metadata such as name, sectors, countries, and asset classification. Returns immediately.
+
+### Example
+
+<CodeGroup>
+
+```bash curl
+curl -X POST "https://yourdomain.com/api/v1/admin/gather/profile-data" \
+  -H "Authorization: Bearer <admin-token>"
+```
+
+</CodeGroup>
+
+---
+
+## POST /api/v1/admin/gather/profile-data/:dataSource/:symbol
+
+Enqueues a high-priority asset profile gathering job for a single symbol.
+
+### Path parameters
+
+<ParamField path="dataSource" type="string" required>
+  Data source enum value. E.g. `YAHOO`, `COINGECKO`.
+</ParamField>
+
+<ParamField path="symbol" type="string" required>
+  Ticker symbol to gather profile data for.
+</ParamField>
+
+### Example
+
+<CodeGroup>
+
+```bash curl
+curl -X POST "https://yourdomain.com/api/v1/admin/gather/profile-data/YAHOO/MSFT" \
+  -H "Authorization: Bearer <admin-token>"
+```
+
+</CodeGroup>
+
+---
+
+## POST /api/v1/admin/gather/:dataSource/:symbol
+
+Triggers an immediate market data gathering job for a single symbol. The job is dispatched asynchronously.
+
+### Path parameters
+
+<ParamField path="dataSource" type="string" required>
+  Data source enum value.
+</ParamField>
+
+<ParamField path="symbol" type="string" required>
+  Ticker symbol to gather data for.
+</ParamField>
+
+---
+
+## POST /api/v1/admin/gather/:dataSource/:symbol/:dateString
+
+Gathers market data for a specific symbol on a specific date. Returns the stored `MarketData` record.
+
+### Path parameters
+
+<ParamField path="dataSource" type="string" required>
+  Data source enum value.
+</ParamField>
+
+<ParamField path="symbol" type="string" required>
+  Ticker symbol.
+</ParamField>
+
+<ParamField path="dateString" type="string" required>
+  ISO 8601 date string, e.g. `2024-01-15`.
+</ParamField>
+
+### Response
+
+<ResponseField name="id" type="string">UUID of the market data entry.</ResponseField>
+<ResponseField name="dataSource" type="string">Data source enum value.</ResponseField>
+<ResponseField name="symbol" type="string">Ticker symbol.</ResponseField>
+<ResponseField name="date" type="string">Date of the data point.</ResponseField>
+<ResponseField name="marketPrice" type="number">Closing market price on that date.</ResponseField>
+
+### Error codes
+
+| Code | Meaning |
+|------|---------|
+| `400` | The `dateString` path parameter is not a valid date. |
+
+---
+
+## POST /api/v1/admin/market-data/:dataSource/:symbol/test
+
+Tests a custom scraper configuration against a symbol's current market price without persisting any data.
+
+### Path parameters
+
+<ParamField path="dataSource" type="string" required>
+  Data source enum value.
+</ParamField>
+
+<ParamField path="symbol" type="string" required>
+  Ticker symbol to test against.
+</ParamField>
+
+### Request body
+
+<ParamField body="scraperConfiguration" type="string" required>
+  JSON-encoded scraper configuration string to validate.
+</ParamField>
+
+### Response
+
+<ResponseField name="price" type="number">
+  The parsed current market price returned by the scraper.
+</ResponseField>
+
+### Error codes
+
+| Code | Meaning |
+|------|---------|
+| `400` | The scraper configuration is invalid or the price could not be parsed. |
+
+---
+
+## POST /api/v1/admin/profile-data/:dataSource/:symbol
+
+Adds a new asset profile for the given data source and symbol combination. The profile is created using the authenticated admin's base currency.
+
+### Path parameters
+
+<ParamField path="dataSource" type="string" required>
+  Data source enum value.
+</ParamField>
+
+<ParamField path="symbol" type="string" required>
+  Ticker symbol.
+</ParamField>
+
+### Response
+
+Returns the created `SymbolProfile` object, or throws if the profile already exists.
+
+---
+
+## DELETE /api/v1/admin/profile-data/:dataSource/:symbol
+
+Deletes the asset profile for the given data source and symbol.
+
+### Path parameters
+
+<ParamField path="dataSource" type="string" required>
+  Data source enum value.
+</ParamField>
+
+<ParamField path="symbol" type="string" required>
+  Ticker symbol.
+</ParamField>
+
+<Warning>
+  Deleting a profile also removes all associated market data and may affect existing activities that reference this symbol.
+</Warning>
+
+---
+
+## PATCH /api/v1/admin/profile-data/:dataSource/:symbol
+
+Partially updates an asset profile's metadata such as name, asset class, sectors, countries, and scraper configuration.
+
+### Path parameters
+
+<ParamField path="dataSource" type="string" required>
+  Data source enum value.
+</ParamField>
+
+<ParamField path="symbol" type="string" required>
+  Ticker symbol.
+</ParamField>
+
+### Request body
+
+Accepts an `UpdateAssetProfileDto` object with optional fields for the profile properties to update, such as `name`, `assetClass`, `assetSubClass`, `countries`, `sectors`, `scraperConfiguration`, and `url`.
+
+### Response
+
+Returns the updated `EnhancedSymbolProfile` object.
+
+---
+
+## PUT /api/v1/admin/settings/:key
+
+Creates or updates a platform-wide property setting by key.
+
+### Path parameters
+
+<ParamField path="key" type="string" required>
+  The property key to set, e.g. `ENABLE_FEATURE_SUBSCRIPTION`.
+</ParamField>
+
+### Request body
+
+<ParamField body="value" type="string" required>
+  The string value to store for this property key.
+</ParamField>
+
+### Example
+
+<CodeGroup>
+
+```bash curl
+curl -X PUT "https://yourdomain.com/api/v1/admin/settings/ENABLE_FEATURE_SUBSCRIPTION" \
+  -H "Authorization: Bearer <admin-token>" \
+  -H "Content-Type: application/json" \
+  -d '{"value": "true"}'
+```
+
+</CodeGroup>

@@ -1,0 +1,138 @@
+---
+title: 'Global markets overview and watchlist'
+description: 'Browse global market trends, monitor asset classes and data sources, and build a personal watchlist of symbols to follow in Ghostfolio.'
+---
+
+The Markets page gives you a real-time pulse on global financial markets without leaving Ghostfolio. It provides an at-a-glance overview of major indices and market trends alongside a personal watchlist where you can monitor symbols that are not yet part of your portfolio.
+
+<CardGroup cols={2}>
+  <Card title="Markets overview" icon="globe">
+    See current trends across global equity, bond, and commodity markets on a single page.
+  </Card>
+  <Card title="Watchlist" icon="eye">
+    Add any symbol to your watchlist to track its price and performance without recording a transaction.
+  </Card>
+  <Card title="Asset classes" icon="layer-group">
+    Ghostfolio categorizes holdings across five asset classes and nine sub-classes for accurate portfolio analysis.
+  </Card>
+  <Card title="Data sources" icon="database">
+    Connect to multiple data providers to fetch prices for stocks, ETFs, cryptocurrencies, and more.
+  </Card>
+</CardGroup>
+
+## Markets overview
+
+The Markets page (`/markets`) displays the current state of global financial markets. It surfaces high-level market data to help you understand the broader economic context around your portfolio.
+
+The overview is powered by the same data infrastructure that prices your holdings, so the figures are consistent with what you see in your portfolio charts.
+
+## Watchlist
+
+The watchlist lets you track symbols you are researching or considering for purchase, without recording any actual transactions. Any symbol that Ghostfolio can resolve through a configured data source can be added to your watchlist.
+
+### Adding a symbol to your watchlist
+
+<Steps>
+  <Step title="Open the Markets page">
+    Navigate to **Markets** from the main menu.
+  </Step>
+  <Step title="Search for a symbol">
+    Use the symbol search field to find the asset you want to watch. Results are returned from the configured data sources.
+  </Step>
+  <Step title="Add to watchlist">
+    Click the bookmark or watch icon next to the symbol in the search results. The symbol is added to your personal watchlist immediately.
+  </Step>
+  <Step title="Monitor from the Markets page">
+    Your watchlist symbols appear in the Markets overview alongside their current prices and recent performance.
+  </Step>
+</Steps>
+
+To remove a symbol from your watchlist, click the same icon again to toggle it off.
+
+<Note>
+The watchlist is personal to your account. It is stored in your user profile and is not visible to other users, even if you have shared portfolio access enabled.
+</Note>
+
+## Asset classes
+
+Ghostfolio classifies every holding into an asset class and, where applicable, an asset sub-class. These classifications drive the allocation charts in your portfolio and enable X-ray rules to detect cluster risks.
+
+<AccordionGroup>
+  <Accordion title="EQUITY">
+    Ownership stakes in companies, including individual stocks, equity ETFs, and mutual funds that invest primarily in equities.
+
+    **Sub-classes:** `STOCK`, `ETF`, `MUTUALFUND`, `PRIVATE_EQUITY`
+  </Accordion>
+  <Accordion title="FIXED_INCOME">
+    Debt instruments that pay regular interest, such as government bonds, corporate bonds, and bond funds.
+
+    **Sub-classes:** `BOND`
+  </Accordion>
+  <Accordion title="COMMODITY">
+    Physical goods and raw materials traded on exchanges, such as precious metals, oil, and agricultural products.
+
+    **Sub-classes:** `COMMODITY`, `PRECIOUS_METAL`
+  </Accordion>
+  <Accordion title="REAL_ESTATE">
+    Property assets including direct real estate holdings and real estate investment trusts (REITs).
+
+    **Sub-classes:** *(classified at the asset class level)*
+  </Accordion>
+  <Accordion title="LIQUIDITY">
+    Cash and cash-equivalent holdings that are readily available, such as savings account balances and money market instruments.
+
+    **Sub-classes:** `CASH`, `CRYPTOCURRENCY`
+  </Accordion>
+</AccordionGroup>
+
+### Asset sub-classes
+
+The full list of supported sub-classes is:
+
+| Sub-class | Typical use |
+|---|---|
+| `STOCK` | Individual company shares |
+| `ETF` | Exchange-traded funds |
+| `MUTUALFUND` | Actively or passively managed mutual funds |
+| `BOND` | Fixed income instruments |
+| `CASH` | Cash balances and money market holdings |
+| `CRYPTOCURRENCY` | Digital assets such as Bitcoin and Ethereum |
+| `PRECIOUS_METAL` | Gold, silver, platinum, and similar commodities |
+| `PRIVATE_EQUITY` | Unlisted company investments |
+
+## Data sources
+
+Ghostfolio fetches market prices from external data providers. The data source is set per activity and per symbol profile, and determines where price history is retrieved from.
+
+<Tabs>
+  <Tab title="Public / free">
+    | Data source | Coverage |
+    |---|---|
+    | `YAHOO` | Stocks, ETFs, mutual funds, indices, and FX rates via Yahoo Finance |
+    | `COINGECKO` | Cryptocurrency prices; requires a CoinGecko API key for higher rate limits |
+    | `GHOSTFOLIO` | Curated data provided by the Ghostfolio cloud service (Ghostfolio Premium) |
+    | `MANUAL` | Manually entered price; no external data fetched. Use with `ITEM` type activities |
+  </Tab>
+  <Tab title="Premium / third-party">
+    | Data source | Coverage |
+    |---|---|
+    | `ALPHA_VANTAGE` | Stocks and FX rates; requires an Alpha Vantage API key |
+    | `FINANCIAL_MODELING_PREP` | Broad equity coverage; requires a Financial Modeling Prep API key |
+    | `EOD_HISTORICAL_DATA` | Global equities and ETFs; requires an EOD Historical Data API key |
+    | `GOOGLE_SHEETS` | Custom price data loaded from a Google Sheets spreadsheet |
+  </Tab>
+</Tabs>
+
+<Info>
+The data source you select for an activity must be able to resolve the symbol you enter. For example, use `COINGECKO` for Bitcoin (`BTC`) and `YAHOO` for Microsoft (`MSFT`).
+</Info>
+
+### Configuring data sources
+
+API keys for third-party data sources are set as environment variables on the Ghostfolio server. See the self-hosting documentation for the full list of supported environment variables.
+
+For `GOOGLE_SHEETS`, you configure the spreadsheet URL and column mapping through the scraper configuration on the symbol profile.
+
+<Tip>
+If you are tracking an asset that has no market symbol — such as a private business, collectible, or piece of art — use `MANUAL` as the data source and record it as an `ITEM` activity. Update the unit price manually each time you want to revalue the asset.
+</Tip>

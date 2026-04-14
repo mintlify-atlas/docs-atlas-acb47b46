@@ -1,0 +1,138 @@
+---
+title: "Environment variables for Ghostfolio"
+description: "Configure your Ghostfolio instance by setting environment variables for the database, cache, authentication, data providers, and server binding."
+---
+
+Ghostfolio reads its runtime configuration entirely from environment variables. When running with Docker Compose, place these variables in a `.env` file at the root of your project. The `.env.example` file in the repository contains the minimum required set to get started.
+
+<Tip>
+  Copy `.env.example` to `.env` and fill in your values before starting the containers: `cp .env.example .env`
+</Tip>
+
+## Example `.env` file
+
+```bash .env
+COMPOSE_PROJECT_NAME=ghostfolio
+
+# Cache
+REDIS_HOST=redis
+REDIS_PORT=6379
+REDIS_PASSWORD=<INSERT_REDIS_PASSWORD>
+
+# PostgreSQL
+POSTGRES_DB=ghostfolio-db
+POSTGRES_USER=user
+POSTGRES_PASSWORD=<INSERT_POSTGRES_PASSWORD>
+
+# Application
+ACCESS_TOKEN_SALT=<INSERT_RANDOM_STRING>
+DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?connect_timeout=300&sslmode=prefer
+JWT_SECRET_KEY=<INSERT_RANDOM_STRING>
+```
+
+## Required variables
+
+These variables must be set. Ghostfolio will not start without them.
+
+<ParamField path="ACCESS_TOKEN_SALT" type="string" required>
+  A random string used as the salt when hashing user security tokens. Generate a strong, unique value and keep it secret — changing this value will invalidate all existing access tokens.
+</ParamField>
+
+<ParamField path="DATABASE_URL" type="string" required>
+  The full PostgreSQL connection URL. Supports variable interpolation so you can reference `POSTGRES_USER`, `POSTGRES_PASSWORD`, and `POSTGRES_DB`.
+
+  ```
+  postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?connect_timeout=300&sslmode=prefer
+  ```
+</ParamField>
+
+<ParamField path="JWT_SECRET_KEY" type="string" required>
+  A random string used to sign JSON Web Tokens (JWTs). Use a long, randomly generated value and keep it secret. Rotating this key will sign out all active sessions.
+</ParamField>
+
+<ParamField path="POSTGRES_DB" type="string" required>
+  The name of the PostgreSQL database Ghostfolio will connect to.
+</ParamField>
+
+<ParamField path="POSTGRES_PASSWORD" type="string" required>
+  The password for the PostgreSQL database user.
+</ParamField>
+
+<ParamField path="POSTGRES_USER" type="string" required>
+  The username for the PostgreSQL database connection.
+</ParamField>
+
+<ParamField path="REDIS_HOST" type="string" required>
+  The hostname or IP address where your Redis instance is running. When using Docker Compose with the default setup, this is typically `redis`.
+</ParamField>
+
+<ParamField path="REDIS_PASSWORD" type="string" required>
+  The password for the Redis connection.
+</ParamField>
+
+<ParamField path="REDIS_PORT" type="number" required>
+  The port Redis is listening on. The standard Redis port is `6379`.
+</ParamField>
+
+## Optional variables
+
+These variables have defaults and do not need to be set unless you want to override the default behavior.
+
+<ParamField path="API_KEY_COINGECKO_DEMO" type="string">
+  Your CoinGecko Demo API key. Set this to use the CoinGecko Demo tier for cryptocurrency market data. If neither Demo nor Pro key is set, CoinGecko requests use the public (unauthenticated) endpoint, which has stricter rate limits.
+</ParamField>
+
+<ParamField path="API_KEY_COINGECKO_PRO" type="string">
+  Your CoinGecko Pro API key. Takes precedence over `API_KEY_COINGECKO_DEMO` when both are set. Use this if you have a paid CoinGecko subscription.
+</ParamField>
+
+<ParamField path="HOST" type="string" default="0.0.0.0">
+  The network interface the Ghostfolio server binds to. The default `0.0.0.0` listens on all interfaces. Set to `127.0.0.1` to restrict access to localhost only.
+</ParamField>
+
+<ParamField path="LOG_LEVELS" type="string[]">
+  Controls which log levels are emitted. Accepts a JSON array of level strings.
+
+  ```bash
+  LOG_LEVELS=["debug","error","log","warn"]
+  ```
+
+  Available levels: `debug`, `error`, `log`, `verbose`, `warn`.
+</ParamField>
+
+<ParamField path="PORT" type="number" default="3333">
+  The port the Ghostfolio application listens on. Change this if port `3333` is already in use on your host.
+</ParamField>
+
+<ParamField path="REDIS_DB" type="number" default="0">
+  The Redis database index to use. Useful when multiple applications share a single Redis instance.
+</ParamField>
+
+<ParamField path="REQUEST_TIMEOUT" type="number" default="2000">
+  The timeout in milliseconds for outbound network requests to external data providers such as Yahoo Finance or CoinGecko. Increase this value if you see timeout errors on slow network connections.
+</ParamField>
+
+## Variable reference table
+
+| Variable | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `ACCESS_TOKEN_SALT` | `string` | Yes | — | Salt for hashing user security tokens |
+| `API_KEY_COINGECKO_DEMO` | `string` | No | — | CoinGecko Demo API key |
+| `API_KEY_COINGECKO_PRO` | `string` | No | — | CoinGecko Pro API key |
+| `DATABASE_URL` | `string` | Yes | — | PostgreSQL connection URL |
+| `HOST` | `string` | No | `0.0.0.0` | Server bind address |
+| `JWT_SECRET_KEY` | `string` | Yes | — | Secret for signing JWTs |
+| `LOG_LEVELS` | `string[]` | No | — | Active log levels |
+| `PORT` | `number` | No | `3333` | Server port |
+| `POSTGRES_DB` | `string` | Yes | — | PostgreSQL database name |
+| `POSTGRES_PASSWORD` | `string` | Yes | — | PostgreSQL password |
+| `POSTGRES_USER` | `string` | Yes | — | PostgreSQL username |
+| `REDIS_DB` | `number` | No | `0` | Redis database index |
+| `REDIS_HOST` | `string` | Yes | — | Redis hostname |
+| `REDIS_PASSWORD` | `string` | Yes | — | Redis password |
+| `REDIS_PORT` | `number` | Yes | — | Redis port |
+| `REQUEST_TIMEOUT` | `number` | No | `2000` | Data provider request timeout (ms) |
+
+<Warning>
+  Never commit your `.env` file to version control. It contains secrets such as `JWT_SECRET_KEY`, `ACCESS_TOKEN_SALT`, and database credentials. Add `.env` to your `.gitignore`.
+</Warning>

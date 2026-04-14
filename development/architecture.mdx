@@ -1,0 +1,204 @@
+---
+title: "Ghostfolio system architecture overview"
+description: "Explore how Ghostfolio's NestJS API, Angular frontend, Prisma ORM, PostgreSQL database, and Redis cache fit together inside an Nx monorepo."
+---
+
+Ghostfolio is a full-stack TypeScript application structured as an [Nx](https://nx.dev) monorepo. The workspace is split into two applications (`apps/`) and two shared libraries (`libs/`). A NestJS backend handles all business logic and data access; an Angular frontend delivers the progressive web app experience. PostgreSQL stores all user and portfolio data via Prisma, while Redis provides response caching.
+
+## Monorepo structure
+
+<CardGroup cols={2}>
+  <Card title="apps/api" icon="server">
+    NestJS backend application. Exposes a versioned REST API at `/api/v1/`, connects to PostgreSQL via Prisma, and uses Redis for caching.
+  </Card>
+  <Card title="apps/client" icon="browser">
+    Angular frontend application. A Progressive Web App with Angular Material UI, i18n support, and a mobile-first design.
+  </Card>
+  <Card title="apps/client-e2e" icon="flask">
+    End-to-end tests for the Angular client, powered by Cypress.
+  </Card>
+  <Card title="apps/ui-e2e" icon="flask">
+    End-to-end tests for the shared UI library, powered by Cypress.
+  </Card>
+  <Card title="libs/common" icon="box">
+    Shared TypeScript types, interfaces, constants, and utility functions used by both the API and client.
+  </Card>
+  <Card title="libs/ui" icon="palette">
+    Shared Angular UI components. Published as a Storybook at [ghostfol.io/development/storybook](https://ghostfol.io/development/storybook).
+  </Card>
+</CardGroup>
+
+The Nx workspace uses the default project `api` (configured in `nx.json`) with `parallel: 1` to ensure deterministic build ordering. Builds, linting, and tests are all cached by Nx.
+
+## Backend — apps/api
+
+The API is built on [NestJS](https://nestjs.com) and organized into feature modules. Each module is a self-contained directory under `apps/api/src/app/` with its own controller, service, and module file.
+
+### Feature modules
+
+<CardGroup cols={3}>
+  <Card title="access" icon="key">
+    Manages public and restricted access grants between users.
+  </Card>
+  <Card title="account" icon="building-columns">
+    Brokerage account CRUD and multi-account management.
+  </Card>
+  <Card title="account-balance" icon="scale-balanced">
+    Historical account balance snapshots.
+  </Card>
+  <Card title="admin" icon="shield">
+    Admin control panel: user management, data provider configuration, and system settings.
+  </Card>
+  <Card title="asset" icon="chart-pie">
+    Asset metadata and enrichment.
+  </Card>
+  <Card title="auth" icon="lock">
+    Authentication: anonymous tokens, JWT, Google OAuth 2.0, and Internet Identity (DFINITY).
+  </Card>
+  <Card title="auth-device" icon="mobile">
+    WebAuthn passkey registration and management via SimpleWebAuthn.
+  </Card>
+  <Card title="cache" icon="database">
+    Application-level cache invalidation and management.
+  </Card>
+  <Card title="endpoints" icon="plug">
+    Miscellaneous utility endpoints.
+  </Card>
+  <Card title="exchange-rate" icon="arrow-right-arrow-left">
+    Currency exchange rate lookups and caching.
+  </Card>
+  <Card title="export" icon="file-export">
+    Exports portfolio activities to JSON.
+  </Card>
+  <Card title="health" icon="heart-pulse">
+    Health check endpoint at `GET /api/v1/health` — no token required.
+  </Card>
+  <Card title="import" icon="file-import">
+    Bulk import of activities via `POST /api/v1/import`.
+  </Card>
+  <Card title="info" icon="circle-info">
+    Application metadata and configuration info.
+  </Card>
+  <Card title="logo" icon="image">
+    Resolves and serves platform logos.
+  </Card>
+  <Card title="order" icon="list">
+    Activity (order) CRUD: BUY, SELL, DIVIDEND, FEE, INTEREST, ITEM, and LIABILITY.
+  </Card>
+  <Card title="platform" icon="network-wired">
+    Brokerage platform management.
+  </Card>
+  <Card title="portfolio" icon="chart-line">
+    Portfolio calculations, performance metrics, and holdings aggregation.
+  </Card>
+  <Card title="redis-cache" icon="bolt">
+    Redis cache service integration via `@keyv/redis`.
+  </Card>
+  <Card title="sitemap" icon="sitemap">
+    Generates the XML sitemap for SEO.
+  </Card>
+  <Card title="subscription" icon="credit-card">
+    Ghostfolio Premium subscription management via Stripe.
+  </Card>
+  <Card title="symbol" icon="tag">
+    Symbol search and market data retrieval from configured data providers.
+  </Card>
+  <Card title="user" icon="user">
+    User profile, settings, and role management.
+  </Card>
+</CardGroup>
+
+### Portfolio calculator
+
+The portfolio module contains a dedicated calculator at `apps/api/src/app/portfolio/calculator/`. It supports four performance calculation methods:
+
+| Directory | Method |
+|---|---|
+| `mwr/` | Money-Weighted Return (MWR) |
+| `roai/` | Return on Average Investment (ROAI) |
+| `roi/` | Return on Investment (ROI) |
+| `twr/` | Time-Weighted Return (TWR) |
+
+A factory (`portfolio-calculator.factory.ts`) selects the appropriate calculator based on user or system settings.
+
+### API versioning and authentication
+
+All API routes are prefixed with `/api/v1/`. Clients authenticate by passing a Bearer token in the `Authorization` header:
+
+```
+Authorization: Bearer eyJh...
+```
+
+Obtain a token via `POST /api/v1/auth/anonymous` with the body `{ "accessToken": "<SECURITY_TOKEN>" }`.
+
+The API also supports an impersonation mechanism — access grants between users allow read-restricted or full-read access to another user's portfolio data without sharing credentials.
+
+## Data layer
+
+<CardGroup cols={2}>
+  <Card title="PostgreSQL" icon="database">
+    Primary relational database. Stores all users, accounts, activities, market data, and settings.
+  </Card>
+  <Card title="Prisma ORM" icon="code">
+    Schema-first ORM. The canonical schema lives in `prisma/schema.prisma`. Migrations are managed with `prisma migrate dev`.
+  </Card>
+  <Card title="Redis" icon="bolt">
+    In-memory cache for market data, exchange rates, and portfolio calculations. Integrated via `@nestjs/cache-manager` and `@keyv/redis`.
+  </Card>
+  <Card title="Multiple data providers" icon="plug">
+    Market data is sourced from Yahoo Finance, CoinGecko, Alpha Vantage, Financial Modeling Prep, EOD Historical Data, and others — selectable per symbol.
+  </Card>
+</CardGroup>
+
+### Prisma schema models
+
+The database schema defines these core models:
+
+| Model | Purpose |
+|---|---|
+| `User` | Application users with roles: `ADMIN`, `USER`, `DEMO`, `INACTIVE` |
+| `Account` | Brokerage accounts linked to a user and optional platform |
+| `AccountBalance` | Historical cash balance snapshots per account |
+| `Order` | Portfolio activities (trades, dividends, fees, etc.) |
+| `SymbolProfile` | Cached instrument metadata from data providers |
+| `SymbolProfileOverrides` | User-supplied overrides for symbol metadata |
+| `MarketData` | Historical price data keyed by data source, date, and symbol |
+| `Platform` | Brokerage platforms (e.g. Coinbase, Interactive Brokers) |
+| `Tag` | User-defined tags for organizing activities |
+| `Access` | Access grants between users for portfolio sharing |
+| `Subscription` | Ghostfolio Premium subscription records |
+| `Settings` | Per-user JSON settings blob |
+| `Analytics` | Request and activity count metrics per user |
+| `ApiKey` | Hashed API keys for programmatic access |
+| `AuthDevice` | WebAuthn passkey credentials |
+| `Property` | Global key-value properties for system configuration |
+
+Authentication providers supported by the `User` model: `ANONYMOUS`, `GOOGLE`, `INTERNET_IDENTITY`.
+
+## Frontend — apps/client
+
+The client is an Angular 19 application built with:
+
+- **[Angular Material](https://material.angular.io)** — component library for UI elements
+- **[Bootstrap 4](https://getbootstrap.com)** — utility classes for layout
+- **Angular i18n** — internationalization with locale-specific builds (e.g., `/en`, `/de`, `/fr`)
+- **Angular Service Worker** — Progressive Web App support
+
+Locale extraction is handled by `npm run extract-locales`, which outputs locale files to `apps/client/src/locales/`.
+
+## Shared libraries
+
+| Library | Path | Contents |
+|---|---|---|
+| `@ghostfolio/common` | `libs/common/` | TypeScript interfaces, enums, constants, and helper functions shared across the API and client |
+| `@ghostfolio/ui` | `libs/ui/` | Reusable Angular components documented in Storybook |
+
+## CI/CD workflows
+
+The GitHub Actions workflows in `.github/workflows/` automate the following:
+
+| Workflow | File | Purpose |
+|---|---|---|
+| Build code | `build-code.yml` | Lint, test, and build all affected projects on each push |
+| Docker image | `docker-image.yml` | Build and publish multi-arch Docker images to Docker Hub |
+| Extract locales | `extract-locales.yml` | Automatically extract and commit i18n translation strings |

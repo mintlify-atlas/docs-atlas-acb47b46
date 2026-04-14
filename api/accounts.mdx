@@ -1,0 +1,333 @@
+---
+title: "Accounts API — manage brokerage accounts"
+description: "REST API endpoints for listing, creating, updating, and deleting investment accounts, plus balance history retrieval and balance transfers between accounts."
+---
+
+Accounts in Ghostfolio represent brokerage or bank accounts that hold your activities (orders). Each account has its own currency and optional platform association. All endpoints require a valid JWT Bearer token. An optional impersonation header (`X-Impersonation-Id`) allows reading another user's accounts if access has been granted.
+
+---
+
+## Account fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | `string` | Yes | Display name for the account. |
+| `currency` | `string` | Yes | ISO 4217 currency code, e.g. `USD`. |
+| `balance` | `number` | Yes | Current cash balance in the account's currency. |
+| `platformId` | `string \| null` | Yes | UUID of the linked platform, or `null` for no platform. |
+| `isExcluded` | `boolean` | No | When `true`, the account is excluded from portfolio calculations. |
+| `comment` | `string` | No | Optional freeform note. |
+| `id` | `string` | No | Provide a specific UUID on creation; auto-generated if omitted. |
+
+---
+
+## GET /api/v1/account
+
+Returns all accounts for the authenticated user, each enriched with its current aggregated value and related holdings.
+
+### Query parameters
+
+<ParamField query="dataSource" type="string">
+  Filter accounts by data source of their linked holdings.
+</ParamField>
+
+<ParamField query="symbol" type="string">
+  Filter accounts that hold a specific ticker symbol.
+</ParamField>
+
+### Response
+
+<ResponseField name="accounts" type="object[]">
+  Array of account objects with aggregated portfolio data.
+  <Expandable title="account properties">
+    <ResponseField name="id" type="string">UUID of the account.</ResponseField>
+    <ResponseField name="name" type="string">Display name.</ResponseField>
+    <ResponseField name="currency" type="string">Account currency code.</ResponseField>
+    <ResponseField name="balance" type="number">Current cash balance.</ResponseField>
+    <ResponseField name="isExcluded" type="boolean">Whether the account is excluded from calculations.</ResponseField>
+    <ResponseField name="comment" type="string">Optional note.</ResponseField>
+    <ResponseField name="platformId" type="string">UUID of the linked platform.</ResponseField>
+    <ResponseField name="valueInBaseCurrency" type="number">Aggregated market value of holdings in base currency.</ResponseField>
+    <ResponseField name="valueInPercentage" type="number">Share of total portfolio value (0–1).</ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example
+
+<CodeGroup>
+
+```bash curl
+curl -X GET "https://yourdomain.com/api/v1/account" \
+  -H "Authorization: Bearer <token>"
+```
+
+</CodeGroup>
+
+---
+
+## GET /api/v1/account/:id
+
+Returns a single account with its aggregated value.
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  UUID of the account to retrieve.
+</ParamField>
+
+### Response
+
+Returns an `AccountWithValue` object containing the same fields as the items in `GET /api/v1/account`.
+
+### Example
+
+<CodeGroup>
+
+```bash curl
+curl -X GET "https://yourdomain.com/api/v1/account/acc-uuid-here" \
+  -H "Authorization: Bearer <token>"
+```
+
+</CodeGroup>
+
+---
+
+## GET /api/v1/account/:id/balances
+
+Returns the balance history for a specific account, useful for tracking cash deposits and withdrawals over time.
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  UUID of the account.
+</ParamField>
+
+### Response
+
+<ResponseField name="balances" type="object[]">
+  Array of balance snapshot entries, ordered by date.
+  <Expandable title="balance entry properties">
+    <ResponseField name="id" type="string">UUID of the balance entry.</ResponseField>
+    <ResponseField name="date" type="string">ISO 8601 date of the snapshot.</ResponseField>
+    <ResponseField name="value" type="number">Balance amount in the account's currency at this date.</ResponseField>
+    <ResponseField name="accountId" type="string">Parent account UUID.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example
+
+<CodeGroup>
+
+```bash curl
+curl -X GET "https://yourdomain.com/api/v1/account/acc-uuid-here/balances" \
+  -H "Authorization: Bearer <token>"
+```
+
+</CodeGroup>
+
+---
+
+## POST /api/v1/account
+
+Creates a new account. Requires the `createAccount` permission.
+
+### Request body
+
+<ParamField body="name" type="string" required>
+  Display name for the account.
+</ParamField>
+
+<ParamField body="currency" type="string" required>
+  ISO 4217 currency code, e.g. `EUR`.
+</ParamField>
+
+<ParamField body="balance" type="number" required>
+  Initial cash balance. Must be a valid number.
+</ParamField>
+
+<ParamField body="platformId" type="string | null" required>
+  UUID of the platform to link, or `null` for no platform.
+</ParamField>
+
+<ParamField body="isExcluded" type="boolean">
+  Whether to exclude this account from portfolio calculations. Defaults to `false`.
+</ParamField>
+
+<ParamField body="comment" type="string">
+  Optional freeform note.
+</ParamField>
+
+<ParamField body="id" type="string">
+  Custom UUID for the account. A UUID v4 is generated automatically if not provided.
+</ParamField>
+
+### Response
+
+Returns the created `Account` object with its generated `id` and `createdAt` timestamp.
+
+### Example
+
+<CodeGroup>
+
+```bash curl
+curl -X POST "https://yourdomain.com/api/v1/account" \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Interactive Brokers",
+    "currency": "USD",
+    "balance": 10000,
+    "platformId": null,
+    "isExcluded": false
+  }'
+```
+
+</CodeGroup>
+
+---
+
+## PUT /api/v1/account/:id
+
+Updates an existing account. Requires the `updateAccount` permission. Returns `403` if the account belongs to a different user.
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  UUID of the account to update.
+</ParamField>
+
+### Request body
+
+<ParamField body="id" type="string" required>
+  UUID of the account (must match the path parameter).
+</ParamField>
+
+<ParamField body="name" type="string" required>
+  Updated display name.
+</ParamField>
+
+<ParamField body="currency" type="string" required>
+  ISO 4217 currency code.
+</ParamField>
+
+<ParamField body="balance" type="number" required>
+  Updated cash balance.
+</ParamField>
+
+<ParamField body="platformId" type="string | null" required>
+  UUID of the platform to link, or `null` to remove the platform association.
+</ParamField>
+
+<ParamField body="isExcluded" type="boolean">
+  Exclusion flag.
+</ParamField>
+
+<ParamField body="comment" type="string">
+  Optional note.
+</ParamField>
+
+### Error codes
+
+| Code | Meaning |
+|------|---------|
+| `403` | Account not found or belongs to another user. |
+
+### Example
+
+<CodeGroup>
+
+```bash curl
+curl -X PUT "https://yourdomain.com/api/v1/account/acc-uuid-here" \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "acc-uuid-here",
+    "name": "Interactive Brokers (Updated)",
+    "currency": "USD",
+    "balance": 12500,
+    "platformId": null
+  }'
+```
+
+</CodeGroup>
+
+---
+
+## DELETE /api/v1/account/:id
+
+Deletes an account. Requires the `deleteAccount` permission.
+
+<Warning>
+  An account cannot be deleted if it has any activities associated with it. Remove or reassign all activities on the account before deleting it.
+</Warning>
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  UUID of the account to delete.
+</ParamField>
+
+### Response
+
+Returns the deleted `Account` object.
+
+### Error codes
+
+| Code | Meaning |
+|------|---------|
+| `403` | Account not found, belongs to another user, or still has activities linked to it. |
+
+### Example
+
+<CodeGroup>
+
+```bash curl
+curl -X DELETE "https://yourdomain.com/api/v1/account/acc-uuid-here" \
+  -H "Authorization: Bearer <token>"
+```
+
+</CodeGroup>
+
+---
+
+## POST /api/v1/account/transfer-balance
+
+Transfers a cash balance from one account to another owned by the same user. Requires the `updateAccount` permission. Both accounts must belong to the authenticated user, must not be the same account, and the source account must have sufficient balance.
+
+### Request body
+
+<ParamField body="accountIdFrom" type="string" required>
+  UUID of the source account.
+</ParamField>
+
+<ParamField body="accountIdTo" type="string" required>
+  UUID of the destination account.
+</ParamField>
+
+<ParamField body="balance" type="number" required>
+  Amount to transfer in the source account's currency.
+</ParamField>
+
+### Error codes
+
+| Code | Meaning |
+|------|---------|
+| `400` | Source and destination are the same account, or source balance is insufficient. |
+| `404` | One or both account UUIDs not found. |
+
+### Example
+
+<CodeGroup>
+
+```bash curl
+curl -X POST "https://yourdomain.com/api/v1/account/transfer-balance" \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountIdFrom": "source-acc-uuid",
+    "accountIdTo": "dest-acc-uuid",
+    "balance": 500
+  }'
+```
+
+</CodeGroup>

@@ -1,0 +1,94 @@
+---
+title: "Ghostfolio REST API reference overview"
+description: "Explore the Ghostfolio REST API: base URL, versioning, Bearer token and API key authentication, JSON request and response format, and available resources."
+---
+
+The Ghostfolio REST API lets you read and write portfolio data programmatically. All endpoints follow a consistent structure: a single base URL, a versioned path prefix, JSON request and response bodies, and Bearer token authentication. This page covers the conventions that apply across every endpoint.
+
+## Base URL
+
+When running Ghostfolio locally the API is available at:
+
+```
+http://localhost:3333
+```
+
+On a self-hosted deployment, replace `localhost:3333` with your own domain or IP address. Every API path is appended directly to this base URL.
+
+## API versioning
+
+All endpoints are prefixed with `/api/v1/`. The version segment is part of the URL — there are no request headers or query parameters for version selection.
+
+```
+http://localhost:3333/api/v1/<resource>
+```
+
+## Authentication
+
+Most endpoints require a Bearer token passed in the `Authorization` header:
+
+```
+Authorization: Bearer eyJh...
+```
+
+Two token sources are supported:
+
+- **Security token** — exchange your account's security token for a JWT via `POST /api/v1/auth/anonymous`.
+- **API key** — generate a long-lived key from **My Ghostfolio → Settings**, then use it directly as the Bearer value.
+
+See the [Authentication](/api/authentication) page for full details and code examples.
+
+## Content type
+
+All request bodies must be sent as JSON. Set the `Content-Type` header on every write request:
+
+```
+Content-Type: application/json
+```
+
+All responses are returned as JSON.
+
+## Health check
+
+The health endpoint is public — no authentication required. Use it to verify that the API server, database, and Redis cache are all reachable.
+
+```bash
+curl http://localhost:3333/api/v1/health
+```
+
+A healthy instance returns `200 OK`:
+
+```json
+{
+  "status": "OK"
+}
+```
+
+If either the database or the Redis cache is unavailable, the endpoint returns `503 Service Unavailable` with `{ "status": "Service Unavailable" }`.
+
+<Info>
+  The health endpoint is marked experimental in the Ghostfolio source. Its response shape may change in a future release.
+</Info>
+
+## Available resources
+
+<CardGroup cols={2}>
+  <Card title="Portfolio" icon="chart-pie" href="/api/portfolio">
+    Read portfolio details, performance metrics, and public portfolio data
+  </Card>
+  <Card title="Activities" icon="list-check" href="/api/activities">
+    Import, create, update, and delete investment activities (orders)
+  </Card>
+  <Card title="Accounts" icon="building-columns" href="/api/accounts">
+    Manage brokerage accounts and platform mappings
+  </Card>
+  <Card title="User" icon="user" href="/api/user">
+    Read and update the authenticated user's profile and settings
+  </Card>
+  <Card title="Admin" icon="shield-halved" href="/api/admin">
+    Administrative operations available to users with the ADMIN role
+  </Card>
+  <Card title="Authentication" icon="key" href="/api/authentication">
+    Obtain Bearer tokens using a security token, API key, or Google OAuth
+  </Card>
+</CardGroup>

@@ -1,0 +1,158 @@
+---
+title: 'Track investment activities and transactions'
+description: 'Record, import, and export investment transactions in Ghostfolio, including buys, sells, dividends, fees, interest, and custom items.'
+---
+
+Activities are the building blocks of your portfolio. Every purchase, sale, dividend payment, fee, and interest receipt is recorded as an activity. Ghostfolio uses these records to calculate your holdings, compute performance metrics, and generate all charts and allocation breakdowns.
+
+<CardGroup cols={2}>
+  <Card title="Seven activity types" icon="arrows-up-down">
+    Record buys, sells, dividends, fees, interest, custom items, and liabilities.
+  </Card>
+  <Card title="Bulk import" icon="upload">
+    Import activities from a CSV file or via the JSON API format.
+  </Card>
+  <Card title="Export" icon="download">
+    Export all activities or draft activities to a JSON file for backup or migration.
+  </Card>
+  <Card title="Tags and drafts" icon="tag">
+    Organize activities with tags, and save planned transactions as drafts before confirming.
+  </Card>
+</CardGroup>
+
+## Activity types
+
+Ghostfolio supports the following transaction types. Choose the type that best describes the event you are recording.
+
+<AccordionGroup>
+  <Accordion title="BUY">
+    A purchase of a security. Requires a symbol, quantity, unit price, date, and currency. The position is added to your holdings and the cost basis is updated.
+  </Accordion>
+  <Accordion title="SELL">
+    A sale of a previously purchased security. Requires the same fields as BUY. Ghostfolio matches the sale against your existing position to calculate realized gain or loss.
+  </Accordion>
+  <Accordion title="DIVIDEND">
+    Income received from a security you hold, such as a stock dividend or ETF distribution. Recorded against a symbol and contributes to dividend timeline charts.
+  </Accordion>
+  <Accordion title="FEE">
+    A standalone fee charge, such as an account maintenance fee or platform fee not tied to a specific trade. Fees are tracked separately and surface in the X-ray fee rules.
+  </Accordion>
+  <Accordion title="INTEREST">
+    Interest income received, for example from a savings account or bond coupon. Recorded independently from dividends.
+  </Accordion>
+  <Accordion title="ITEM">
+    A custom asset that does not have a market data symbol — for example, a piece of real estate, a car, or jewelry. Use the `MANUAL` data source for items. The value is set manually via `unitPrice`.
+  </Accordion>
+  <Accordion title="LIABILITY">
+    A debt or obligation, such as a mortgage or loan. Recording liabilities allows Ghostfolio to calculate your net worth accurately by subtracting them from your total asset value.
+  </Accordion>
+</AccordionGroup>
+
+## Creating an activity
+
+<Steps>
+  <Step title="Open the Activities tab">
+    Navigate to **Portfolio** and select the **Activities** tab. On mobile, tap the swap icon in the bottom navigation bar.
+  </Step>
+  <Step title="Open the create dialog">
+    Tap the **+** button (floating action button) at the bottom right of the screen.
+  </Step>
+  <Step title="Fill in the activity details">
+    Select the activity type, then enter the required fields. For securities, type the symbol name into the search field to look it up from the configured data source.
+  </Step>
+  <Step title="Assign an account (optional)">
+    Select the account this activity belongs to. If you leave this blank, the activity is recorded without an account assignment.
+  </Step>
+  <Step title="Save the activity">
+    Click **Save**. Ghostfolio immediately recalculates your portfolio using the new activity.
+  </Step>
+</Steps>
+
+<Tip>
+You can clone an existing activity to quickly record a similar transaction. Click the activity row in the list and select the clone option from the action menu.
+</Tip>
+
+## Editing and deleting activities
+
+To edit an activity, click its row in the activities list. The same create/edit dialog opens with the existing values pre-filled. Make your changes and save.
+
+To delete a single activity, click the activity row and select **Delete** from the action menu. To delete multiple activities at once, use the bulk delete option available when filters are applied.
+
+<Warning>
+Deleting an activity is permanent and immediately updates all portfolio calculations. There is no undo.
+</Warning>
+
+## Draft activities
+
+When you are planning a future trade but have not yet executed it, you can mark an activity as a **draft**. Draft activities are excluded from portfolio performance calculations and holdings but remain visible in the activities list so you can track planned transactions.
+
+To save an activity as a draft, check the **Draft** option in the create or edit dialog before saving.
+
+## Tags
+
+Activities can be labelled with one or more tags to help you group and filter transactions. For example, you might tag activities with a strategy name (`growth`, `income`) or a tax year (`2024`).
+
+Tags are created when you type a new label in the tag field of the activity dialog. Once created, tags are available to all your activities. You can filter the activities list by one or more tags using the filter bar.
+
+## Importing activities
+
+Ghostfolio supports two import methods: file upload (CSV) and the JSON API format.
+
+<Tabs>
+  <Tab title="CSV import">
+    From the Activities tab, click **Import** and select a CSV file from your device. Ghostfolio maps the columns in the file to activity fields. The expected column headers match the JSON field names described below.
+
+    <Note>
+    CSV import is available directly from the Activities page toolbar. Click the import icon next to the export button.
+    </Note>
+  </Tab>
+  <Tab title="JSON import">
+    You can import activities programmatically by posting a JSON payload to the import endpoint. The JSON format is also the output format when you export activities, making it suitable for backups and migrations between Ghostfolio instances.
+
+    **Endpoint:** `POST /api/v1/import`
+
+    **Request body:**
+
+    ```json
+    {
+      "activities": [
+        {
+          "currency": "USD",
+          "dataSource": "YAHOO",
+          "date": "2021-09-15T00:00:00.000Z",
+          "fee": 19,
+          "quantity": 5,
+          "symbol": "MSFT",
+          "type": "BUY",
+          "unitPrice": 298.58
+        }
+      ]
+    }
+    ```
+
+    A `201 Created` response indicates success. If any activity in the array is a duplicate, the import returns `400 Bad Request` with a message identifying the duplicate entry.
+  </Tab>
+</Tabs>
+
+### Activity fields
+
+The table below documents all fields for each activity record, as used in both the JSON import format and the export output.
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `accountId` | string | No | The ID of the account to assign this activity to |
+| `comment` | string | No | A freeform note attached to the activity |
+| `currency` | string | Yes | ISO 4217 currency code, e.g. `USD`, `EUR`, `CHF` |
+| `dataSource` | string | Yes | The market data provider: `YAHOO`, `COINGECKO`, or `MANUAL` (for `ITEM` type) |
+| `date` | string | Yes | Transaction date in ISO 8601 format, e.g. `2021-09-15T00:00:00.000Z` |
+| `fee` | number | Yes | Brokerage or transaction fee in the activity currency. Use `0` if no fee applies |
+| `quantity` | number | Yes | Number of units bought, sold, or received |
+| `symbol` | string | Yes | The ticker symbol or identifier, appropriate for the chosen `dataSource` |
+| `type` | string | Yes | One of: `BUY`, `SELL`, `DIVIDEND`, `FEE`, `INTEREST`, `ITEM`, `LIABILITY` |
+| `unitPrice` | number | Yes | Price per unit in the activity currency |
+
+## Exporting activities
+
+To export all your activities, click the **Export** button in the Activities tab toolbar. Ghostfolio downloads a JSON file containing all activities in the import-compatible format, suitable for backup or transfer to another instance.
+
+To export only draft activities, use the **Export Drafts** option from the same toolbar.

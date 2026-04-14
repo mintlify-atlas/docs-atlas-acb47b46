@@ -1,0 +1,181 @@
+---
+title: "Contribute to Ghostfolio open source"
+description: "Learn how to fork Ghostfolio, submit pull requests, implement experimental features, upgrade dependencies, and connect with the contributor community."
+---
+
+Ghostfolio is 100% free and open source, licensed under [AGPL v3](https://www.gnu.org/licenses/agpl-3.0.html). Contributions from the community are actively encouraged — from bug fixes and new features to translations and documentation. This page covers everything you need to make your first contribution.
+
+## Community and support
+
+Before you start, join the conversation:
+
+- **Slack**: [Join the Ghostfolio Slack workspace](https://join.slack.com/t/ghostfolio/shared_invite/zt-vsaan64h-F_I0fEo5M0P88lP9ibCxFg) to ask questions and discuss ideas with the team and other contributors.
+- **X (Twitter)**: Follow and mention [@ghostfolio\_](https://x.com/ghostfolio_) for announcements and community updates.
+- **GitHub Issues**: Browse [issues labeled `help wanted`](https://github.com/ghostfolio/ghostfolio/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) or [issues labeled `good first issue`](https://github.com/ghostfolio/ghostfolio/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) to find something to work on.
+
+## Contribution workflow
+
+<Steps>
+  <Step title="Fork and clone">
+    Fork the repository on GitHub, then clone your fork locally:
+
+    ```bash
+    git clone https://github.com/<your-username>/ghostfolio.git
+    cd ghostfolio
+    ```
+
+    Add the upstream remote so you can stay in sync:
+
+    ```bash
+    git remote add upstream https://github.com/ghostfolio/ghostfolio.git
+    ```
+  </Step>
+
+  <Step title="Set up the development environment">
+    Follow the [setup guide](/development/setup) to install dependencies, start Docker services, and run the server and client locally.
+  </Step>
+
+  <Step title="Create a branch">
+    Create a descriptive branch off `main` for your change:
+
+    ```bash
+    git checkout -b feat/describe-your-change
+    ```
+
+    Keep branch names short and lowercase. Use a prefix like `feat/`, `fix/`, or `docs/` to indicate the type of change.
+  </Step>
+
+  <Step title="Make your changes">
+    Implement your feature or fix. Follow the existing code style — the project uses Prettier and ESLint. You can format and lint the workspace with:
+
+    ```bash
+    npm run format
+    npm run lint
+    ```
+
+    Run tests to verify nothing is broken:
+
+    ```bash
+    npm test
+    ```
+  </Step>
+
+  <Step title="Rebase and clean up commits">
+    Before opening a pull request, rebase interactively onto `main` to squash work-in-progress commits into clean, logical commits:
+
+    ```bash
+    git rebase -i --autosquash main
+    ```
+
+    This rewrites your local branch history to produce a tidy commit log that is easy to review.
+  </Step>
+
+  <Step title="Open a pull request">
+    Push your branch to your fork and open a pull request against the `ghostfolio/ghostfolio` `main` branch on GitHub. Provide a clear description of the problem and how your change addresses it. Reference any related GitHub issues.
+  </Step>
+</Steps>
+
+## Experimental features
+
+New or in-progress functionality is guarded behind a feature flag tied to the user's `isExperimentalFeatures` setting. This lets experimental code ship without affecting users who have not opted in.
+
+### Enabling in the backend
+
+In the `UserService`, remove the relevant permission using `without()`. The permission will then not be granted to users who do not have the experimental features flag enabled.
+
+### Enabling in the frontend
+
+Wrap new UI in an `@if` block that checks the user's settings:
+
+```html
+@if (user?.settings?.isExperimentalFeatures) {
+  <!-- experimental content here -->
+}
+```
+
+<Info>
+  Users can enable experimental features in their account settings. The flag is stored in the `Settings` model's JSON `settings` column.
+</Info>
+
+## Upgrading dependencies
+
+### Angular (minor versions)
+
+Use `npm-check-updates` to upgrade Angular packages to the latest minor version:
+
+```bash
+npx npm-check-updates --upgrade --target "minor" --filter "/@angular.*/"
+```
+
+After the upgrade, run `npm install` and verify the build and tests still pass.
+
+### Nx
+
+<Steps>
+  <Step title="Run the Nx migration">
+    ```bash
+    npx nx migrate latest
+    ```
+  </Step>
+  <Step title="Review and install">
+    Review the changes Nx made to `package.json`, then install:
+
+    ```bash
+    npm install
+    ```
+  </Step>
+  <Step title="Apply migrations">
+    ```bash
+    npx nx migrate --run-migrations
+    ```
+  </Step>
+</Steps>
+
+### Prisma
+
+To upgrade Prisma, update the `prisma` and `@prisma/client` versions in `package.json` and run `npm install`. After upgrading, regenerate the Prisma client and validate the schema:
+
+```bash
+npm run database:generate-typings
+npm run database:validate-schema
+```
+
+If the schema has changed, push the updated schema or create a migration:
+
+<CodeGroup>
+
+```bash Push schema (prototyping)
+npm run database:push
+```
+
+```bash Create a named migration
+npm run prisma migrate dev --name describe_your_change
+```
+
+</CodeGroup>
+
+## Component library
+
+The shared Angular components in `libs/ui/` are documented in Storybook. Run Storybook locally to develop and preview components in isolation:
+
+```bash
+npm run start:storybook
+```
+
+The published Storybook is available at [https://ghostfol.io/development/storybook](https://ghostfol.io/development/storybook).
+
+<Tip>
+  When adding a new shared component to `libs/ui/`, write a Storybook story alongside it so other contributors can discover and understand its usage.
+</Tip>
+
+## Reporting bugs
+
+Use the [bug report template](https://github.com/ghostfolio/ghostfolio/issues/new?template=bug_report.md) on GitHub to report issues. Include steps to reproduce, expected behavior, and your environment details.
+
+## License
+
+By contributing to Ghostfolio, you agree that your contributions will be licensed under the [GNU Affero General Public License v3 (AGPL v3)](https://www.gnu.org/licenses/agpl-3.0.html).
+
+<Note>
+  If you want to support the project financially, consider subscribing to [Ghostfolio Premium](https://ghostfol.io/en/pricing) or [buying the maintainer a coffee](https://www.buymeacoffee.com/ghostfolio).
+</Note>

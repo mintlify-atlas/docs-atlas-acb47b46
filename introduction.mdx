@@ -1,0 +1,83 @@
+---
+title: "Ghostfolio: Open Source Wealth Management"
+description: "Ghostfolio is open source wealth management software for tracking stocks, ETFs, and cryptocurrencies. Stay on top of your investments with data-driven insights."
+---
+
+Ghostfolio is a modern, open source wealth management application that helps you track your entire investment portfolio across multiple brokerages and exchanges. Built with privacy in mind, Ghostfolio gives you full data ownership — whether you use the hosted cloud service or run it on your own infrastructure.
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Get your Ghostfolio account up and running in minutes
+  </Card>
+  <Card title="Self-Hosting" icon="server" href="/self-hosting">
+    Deploy Ghostfolio on your own infrastructure with Docker
+  </Card>
+  <Card title="Core Features" icon="chart-line" href="/features/portfolio">
+    Explore portfolio tracking, analytics, and investment insights
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/overview">
+    Integrate with the Ghostfolio REST API
+  </Card>
+</CardGroup>
+
+## What is Ghostfolio?
+
+Ghostfolio empowers investors to make data-driven decisions by consolidating all their holdings in one place. Whether you trade stocks, ETFs, or cryptocurrencies across multiple platforms, Ghostfolio provides a unified view of your wealth with performance metrics, portfolio composition, and risk analysis.
+
+The application is designed for personal use in continuous operation — it tracks your portfolio in real time and surfaces actionable insights without requiring you to maintain a spreadsheet.
+
+## Key capabilities
+
+<CardGroup cols={2}>
+  <Card title="Portfolio Performance" icon="chart-mixed">
+    Track returns across multiple time periods: Today, WTD, MTD, YTD, 1Y, 5Y, and All-time
+  </Card>
+  <Card title="Multi-Account Management" icon="building-columns">
+    Manage stocks, ETFs, crypto, and custom assets across all your brokerages in one place
+  </Card>
+  <Card title="Activity Tracking" icon="list-check">
+    Record and import BUY, SELL, DIVIDEND, FEE, INTEREST, and ITEM transactions
+  </Card>
+  <Card title="Risk Analysis" icon="shield-halved">
+    Static analysis to identify concentration risks and diversification opportunities
+  </Card>
+  <Card title="Data Privacy" icon="lock">
+    Self-host on your own infrastructure or use the cloud offering — you always own your data
+  </Card>
+  <Card title="Public Sharing" icon="share-nodes">
+    Share your portfolio publicly with access controls for transparency
+  </Card>
+</CardGroup>
+
+## Technology stack
+
+Ghostfolio is a full-stack TypeScript application organized as an [Nx](https://nx.dev) monorepo:
+
+- **Backend**: [NestJS](https://nestjs.com) with [PostgreSQL](https://www.postgresql.org) (via [Prisma](https://www.prisma.io)) and [Redis](https://redis.io) for caching
+- **Frontend**: [Angular](https://angular.dev) with [Angular Material](https://material.angular.io)
+- **Deployment**: Docker-based with official images for `linux/amd64`, `linux/arm/v7`, and `linux/arm64`
+
+## Getting started
+
+<Steps>
+  <Step title="Create your account">
+    Sign up at [ghostfol.io](https://ghostfol.io) or deploy Ghostfolio on your own server. The first registered user automatically receives the `ADMIN` role.
+  </Step>
+  <Step title="Add your accounts">
+    Create brokerage accounts under **My Ghostfolio → Accounts** and link them to platforms like Interactive Brokers, Coinbase, or any custom platform.
+  </Step>
+  <Step title="Import your activities">
+    Add transactions manually, import a CSV file, or use the REST API to bulk import your trading history.
+  </Step>
+  <Step title="Explore your portfolio">
+    Navigate to the **Portfolio** section to see your holdings, performance charts, diversification breakdown, and risk analysis.
+  </Step>
+</Steps>
+
+## Ghostfolio Premium
+
+The official [Ghostfolio Premium](https://ghostfol.io/en/pricing) cloud offering is the easiest way to get started. Revenue from Premium subscriptions funds the ongoing development and hosting infrastructure of the open source project.
+
+<Note>
+  Ghostfolio is licensed under the [AGPL v3](https://www.gnu.org/licenses/agpl-3.0.html). It is 100% free and open source.
+</Note>

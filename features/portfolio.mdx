@@ -1,0 +1,140 @@
+---
+title: 'Portfolio analysis and performance tracking'
+description: 'Analyze your portfolio with ROAI performance metrics, benchmark charts, holdings breakdown, and diversification views by asset class, sector, and country.'
+---
+
+The portfolio section is the analytical core of Ghostfolio. It consolidates all your accounts and activities into a single view, so you can measure returns, visualize growth over time, and understand how your wealth is distributed across assets, geographies, and sectors.
+
+<CardGroup cols={2}>
+  <Card title="Performance metrics" icon="chart-line">
+    Track ROAI across seven time periods: Today, WTD, MTD, YTD, 1Y, 5Y, and Max.
+  </Card>
+  <Card title="Holdings view" icon="list">
+    See every position with current value, allocation percentage, and net performance.
+  </Card>
+  <Card title="Allocations breakdown" icon="pie-chart">
+    Proportion charts by asset class, sector, continent, country, account, and currency.
+  </Card>
+  <Card title="X-ray risk analysis" icon="scan">
+    Static rules that identify cluster risks across currency, asset class, account, and market exposure.
+  </Card>
+</CardGroup>
+
+## Portfolio tabs
+
+The portfolio page is organized into five tabs, each focused on a distinct type of analysis.
+
+### Analysis
+
+The Analysis tab is your primary performance dashboard. At the top, a benchmark comparator overlays your portfolio returns against a market index of your choice.
+
+Below the benchmark chart, Ghostfolio displays a summary card with four performance figures:
+
+- **Absolute Asset Performance** — total gain or loss from price movement, in your base currency
+- **Asset Performance** — same figure expressed as a percentage
+- **Absolute Currency Performance** — gain or loss attributable to exchange rate movements
+- **Net Performance** — combined asset and currency effect, both absolute and percentage
+
+The tab also shows **Top** and **Bottom** performers (the three best and worst holdings by net performance percentage), a **Portfolio Evolution** chart, an **Investment Timeline** chart (grouped by month or year), and a **Dividend Timeline** chart.
+
+<Note>
+Investment and dividend timeline charts can be toggled between monthly and yearly groupings using the control at the top right of each chart.
+</Note>
+
+### Activities
+
+The Activities tab lists every transaction you have recorded. See [Activities](/features/activities) for full details on managing transactions.
+
+### Allocations
+
+The Allocations tab provides a detailed breakdown of how your portfolio is distributed. All charts update when you apply filters (by account, asset class, or tag) from the filter bar.
+
+| Chart | What it shows |
+|---|---|
+| By Platform | Weighting across brokerages linked to your accounts |
+| By Currency | Exposure to each currency in your portfolio |
+| By Asset Class | Split between Equity, Fixed Income, Commodity, etc. |
+| By Holding | Proportion chart for each individual symbol |
+| By Sector | Industry sector exposure |
+| By Continent | Continental geographic breakdown |
+| By Market | Developed Markets, Emerging Markets, and Other |
+| By Country | Country-level allocation (up to ten shown) |
+| By Account | Weighting across your named accounts |
+| By ETF Provider | Fund provider exposure when holdings are ETFs |
+
+A **Regions** world map chart provides a geographic overview with developed and emerging market percentages shown below the map.
+
+### X-ray
+
+X-ray uses static analysis to identify potential risks and concentration issues in your portfolio. Rules are grouped into the following categories:
+
+- **Emergency Fund** — checks whether you have adequate liquid reserves
+- **Currency Cluster Risks** — flags over-concentration in a single currency
+- **Asset Class Cluster Risks** — flags over-concentration in a single asset class
+- **Account Cluster Risks** — flags over-concentration of assets held at a single broker
+- **Economic Market Cluster Risks** — broad economic market concentration
+- **Regional Market Cluster Risks** — geographic concentration within market regions
+- **Fees** — highlights excessive fee exposure
+
+Each rule shows a pass or warning status. The header shows how many of the active rules your portfolio currently satisfies.
+
+<Tip>
+You can adjust the threshold for each rule to match your own investment strategy. Rule thresholds are saved to your user settings.
+</Tip>
+
+### FIRE
+
+The FIRE tab (Financial Independence, Retire Early) provides projections based on your current savings rate and investment trajectory.
+
+## Performance metric: ROAI
+
+Ghostfolio measures performance using **Return on Average Investment (ROAI)**. Unlike a simple return on initial investment, ROAI accounts for the fact that capital is deployed progressively over time. It divides net performance by the average invested capital across the measurement period, giving a more accurate picture of how efficiently your capital has been working.
+
+ROAI is reported for each of these date ranges:
+
+| Period | Description |
+|---|---|
+| Today | Change since yesterday's closing price |
+| WTD | Week to date |
+| MTD | Month to date |
+| YTD | Year to date |
+| 1Y | Rolling 12 months |
+| 5Y | Rolling 5 years |
+| Max | Since your first recorded activity |
+
+## Display modes
+
+### Dark mode
+
+Ghostfolio fully supports dark mode. You can toggle between light and dark themes in your user settings. The preference is saved to your account.
+
+### Zen mode
+
+Zen mode hides all absolute monetary values across the application, displaying only relative percentages. This is useful when sharing your screen or reviewing performance in a public setting without exposing your actual portfolio value.
+
+<Info>
+Zen mode applies globally across all portfolio views. You can toggle it in your account settings under **View Mode**.
+</Info>
+
+## Public portfolio sharing
+
+You can share a read-only view of your portfolio with others using an access link.
+
+<Steps>
+  <Step title="Open My Ghostfolio">
+    Navigate to **My Ghostfolio** from the main menu.
+  </Step>
+  <Step title="Go to the Access tab">
+    Select the **Access** tab within your account settings.
+  </Step>
+  <Step title="Grant public access">
+    Create a new access grant with the type set to **Public**. You can optionally set an alias to identify the access grant.
+  </Step>
+  <Step title="Share the link">
+    Copy the generated access link and share it. Recipients can view your portfolio performance without logging in or requiring an account.
+  </Step>
+</Steps>
+
+<Warning>
+A public access link exposes portfolio performance data to anyone who has the URL. Use the alias field to help you identify and revoke access grants you no longer need.
+</Warning>

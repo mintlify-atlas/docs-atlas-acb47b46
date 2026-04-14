@@ -1,0 +1,148 @@
+---
+title: "Configure data providers for market data"
+description: "Set up data providers to fetch real-time and historical prices for stocks, ETFs, cryptocurrencies, and other assets in your Ghostfolio instance."
+---
+
+Ghostfolio fetches market data — quotes, historical prices, and asset profiles — from external data providers. Each activity and symbol profile in the database has a `dataSource` field that identifies which provider supplies its data. Ghostfolio supports nine data sources, ranging from free public APIs to premium commercial feeds.
+
+## Supported data sources
+
+The following data sources map directly to the `DataSource` enum in the database schema.
+
+### Yahoo Finance (`YAHOO`)
+
+Yahoo Finance is the default data provider and requires no API key for basic use. It covers stocks, ETFs, mutual funds, indices, currencies, and futures listed on major exchanges worldwide.
+
+<Note>
+  Yahoo Finance is the recommended starting point for most self-hosted deployments. Use it as your primary source for equities and ETFs.
+</Note>
+
+**When to use:** Stocks, ETFs, mutual funds, and most exchange-listed instruments.
+
+**API key required:** No.
+
+---
+
+### CoinGecko (`COINGECKO`)
+
+CoinGecko provides cryptocurrency market data including prices, market cap, and trading volume. Ghostfolio supports three tiers of CoinGecko access, controlled by environment variables.
+
+| Tier | Environment variable | Notes |
+|---|---|---|
+| Public (no key) | — | Rate-limited; suitable for light personal use |
+| Demo | `API_KEY_COINGECKO_DEMO` | Higher rate limits on the free Demo plan |
+| Pro | `API_KEY_COINGECKO_PRO` | Paid plan; highest rate limits |
+
+Set the appropriate variable in your `.env` file:
+
+```bash .env
+# Use one of the following — Pro takes precedence if both are set
+API_KEY_COINGECKO_DEMO=your_demo_api_key
+API_KEY_COINGECKO_PRO=your_pro_api_key
+```
+
+**When to use:** Cryptocurrencies.
+
+---
+
+### Alpha Vantage (`ALPHA_VANTAGE`)
+
+Alpha Vantage offers stock, forex, and cryptocurrency data via a commercial API. A free tier is available with limited requests per minute.
+
+**When to use:** Equities and forex when you need an alternative to Yahoo Finance.
+
+**API key required:** Yes — obtain one from [alphavantage.co](https://www.alphavantage.co).
+
+---
+
+### Financial Modeling Prep (`FINANCIAL_MODELING_PREP`)
+
+Financial Modeling Prep provides fundamental data, financial statements, and market prices for global equities.
+
+**When to use:** US and international equities, especially when fundamental data is needed.
+
+**API key required:** Yes — obtain one from [financialmodelingprep.com](https://financialmodelingprep.com).
+
+---
+
+### EOD Historical Data (`EOD_HISTORICAL_DATA`)
+
+EOD Historical Data covers a large set of global exchanges with end-of-day and intraday price data.
+
+**When to use:** Global equities and ETFs, particularly exchanges not well covered by Yahoo Finance.
+
+**API key required:** Yes — obtain one from [eodhd.com](https://eodhd.com).
+
+---
+
+### Ghostfolio (`GHOSTFOLIO`)
+
+The Ghostfolio data provider connects to the official Ghostfolio cloud infrastructure. It is enabled automatically when a Ghostfolio API key is configured in the admin panel under **System → Ghostfolio API Key**.
+
+**When to use:** When you have a Ghostfolio Premium subscription and want to use the curated Ghostfolio data feed.
+
+---
+
+### Manual (`MANUAL`)
+
+The `MANUAL` data source is for assets you track manually without an external price feed. It is used exclusively with activities of type `ITEM` — for example, real estate, private equity, collectibles, or other non-traded assets whose value you enter yourself.
+
+<Info>
+  When importing activities via the API, use `"dataSource": "MANUAL"` together with `"type": "ITEM"` for custom assets.
+</Info>
+
+---
+
+### Google Sheets (`GOOGLE_SHEETS`)
+
+The Google Sheets data provider lets you supply custom price data from a Google Sheets spreadsheet. This is useful for assets with no standard market feed or for backtesting with custom data.
+
+**When to use:** Custom assets or any instrument where you maintain your own price history.
+
+---
+
+### RapidAPI (`RAPID_API`)
+
+The RapidAPI data source allows Ghostfolio to fetch market data through the RapidAPI marketplace, which aggregates multiple financial data APIs behind a single key.
+
+**When to use:** When you want to access financial APIs that are available through RapidAPI.
+
+**API key required:** Yes — obtain one from [rapidapi.com](https://rapidapi.com).
+
+---
+
+## Configuring the request timeout
+
+All outbound data provider requests share a single configurable timeout. If a provider is slow to respond, Ghostfolio will cancel the request after the timeout period and log an error.
+
+```bash .env
+# Timeout in milliseconds (default: 2000)
+REQUEST_TIMEOUT=5000
+```
+
+Increase `REQUEST_TIMEOUT` if you see timeout errors in your logs, especially with providers that have higher latency.
+
+## Matching activities to data sources
+
+Every activity stored in Ghostfolio has a `dataSource` field that must match one of the supported values above. When importing activities via the REST API, set the `dataSource` field to the appropriate value for the symbol you are importing.
+
+```json
+{
+  "activities": [
+    {
+      "currency": "USD",
+      "dataSource": "YAHOO",
+      "date": "2021-09-15T00:00:00.000Z",
+      "fee": 19,
+      "quantity": 5,
+      "symbol": "MSFT",
+      "type": "BUY",
+      "unitPrice": 298.58
+    }
+  ]
+}
+```
+
+<Warning>
+  Using an incorrect `dataSource` value for a symbol will cause Ghostfolio to fail when fetching market data for that activity. Always verify that the symbol exists in the chosen data provider before importing.
+</Warning>

@@ -1,0 +1,497 @@
+---
+title: "Activities (orders) API — create, read, import, export"
+description: "REST API endpoints for listing, creating, updating, and deleting investment activities, plus bulk import and full export of all transactions."
+---
+
+Activities (also referred to as orders internally) are the core record of every financial transaction in Ghostfolio — buys, sells, dividends, fees, interest payments, and more. This page documents the CRUD endpoints on `/api/v1/order`, as well as the bulk import endpoint at `/api/v1/import` and the export endpoint at `/api/v1/export`. All endpoints require a valid JWT Bearer token.
+
+---
+
+## Activity types
+
+| Type | Description |
+|------|-------------|
+| `BUY` | Purchase of an asset. |
+| `SELL` | Sale of an asset. |
+| `DIVIDEND` | Dividend income received. |
+| `FEE` | A standalone fee or commission. |
+| `INTEREST` | Interest income (e.g. savings, bonds). |
+| `ITEM` | A manually tracked item or asset (e.g. real estate, collectibles). |
+| `LIABILITY` | A liability or debt entry. |
+
+---
+
+## Data sources
+
+| Value | Description |
+|-------|-------------|
+| `YAHOO` | Yahoo Finance. |
+| `COINGECKO` | CoinGecko (cryptocurrencies). |
+| `ALPHA_VANTAGE` | Alpha Vantage. |
+| `EOD_HISTORICAL_DATA` | EOD Historical Data. |
+| `FINANCIAL_MODELING_PREP` | Financial Modeling Prep. |
+| `GHOSTFOLIO` | Ghostfolio built-in data. |
+| `GOOGLE_SHEETS` | Custom Google Sheets data source. |
+| `RAPID_API` | RapidAPI provider. |
+| `MANUAL` | Manually entered price (no automatic data gathering). |
+
+---
+
+## GET /api/v1/order
+
+Returns a paginated, filterable list of all activities for the authenticated user, including draft activities.
+
+### Query parameters
+
+<ParamField query="range" type="string">
+  Date range filter. Accepted values: `1d`, `wtd`, `mtd`, `ytd`, `1y`, `5y`, `max`, or a four-digit year.
+</ParamField>
+
+<ParamField query="accounts" type="string">
+  Comma-separated account IDs to filter by.
+</ParamField>
+
+<ParamField query="assetClasses" type="string">
+  Comma-separated asset class values. Enum: `COMMODITY`, `EQUITY`, `FIXED_INCOME`, `LIQUIDITY`, `REAL_ESTATE`.
+</ParamField>
+
+<ParamField query="dataSource" type="string">
+  Filter by data source enum value.
+</ParamField>
+
+<ParamField query="symbol" type="string">
+  Filter to a single ticker symbol.
+</ParamField>
+
+<ParamField query="tags" type="string">
+  Comma-separated tag IDs to filter by.
+</ParamField>
+
+<ParamField query="sortColumn" type="string">
+  Column name to sort results by, e.g. `date`.
+</ParamField>
+
+<ParamField query="sortDirection" type="string">
+  Sort direction. Values: `asc`, `desc`.
+</ParamField>
+
+<ParamField query="skip" type="number">
+  Number of records to skip for pagination.
+</ParamField>
+
+<ParamField query="take" type="number">
+  Maximum number of records to return.
+</ParamField>
+
+### Response
+
+<ResponseField name="activities" type="object[]">
+  Array of activity objects.
+  <Expandable title="activity properties">
+    <ResponseField name="id" type="string">UUID of the activity.</ResponseField>
+    <ResponseField name="date" type="string">ISO 8601 date of the transaction.</ResponseField>
+    <ResponseField name="type" type="string">Activity type enum value.</ResponseField>
+    <ResponseField name="symbol" type="string">Ticker symbol.</ResponseField>
+    <ResponseField name="dataSource" type="string">Data source enum value.</ResponseField>
+    <ResponseField name="currency" type="string">ISO 4217 currency code.</ResponseField>
+    <ResponseField name="quantity" type="number">Number of units transacted.</ResponseField>
+    <ResponseField name="unitPrice" type="number">Price per unit at time of transaction.</ResponseField>
+    <ResponseField name="fee" type="number">Transaction fee.</ResponseField>
+    <ResponseField name="accountId" type="string">ID of the associated account, if any.</ResponseField>
+    <ResponseField name="comment" type="string">Optional freeform note.</ResponseField>
+    <ResponseField name="isDraft" type="boolean">Whether this activity is a draft.</ResponseField>
+    <ResponseField name="tags" type="object[]">Tags assigned to this activity.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="count" type="number">
+  Total number of activities matching the filters (before pagination).
+</ResponseField>
+
+### Example
+
+<CodeGroup>
+
+```bash curl
+curl -X GET "https://yourdomain.com/api/v1/order?range=ytd&sortColumn=date&sortDirection=desc" \
+  -H "Authorization: Bearer <token>"
+```
+
+</CodeGroup>
+
+---
+
+## GET /api/v1/order/:id
+
+Returns a single activity by its UUID.
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  UUID of the activity to retrieve.
+</ParamField>
+
+### Error codes
+
+| Code | Meaning |
+|------|---------|
+| `404` | Activity not found for the authenticated user. |
+
+---
+
+## POST /api/v1/order
+
+Creates a new activity. Requires the `createOrder` permission.
+
+### Request body
+
+<ParamField body="type" type="string" required>
+  Activity type. Enum: `BUY`, `SELL`, `DIVIDEND`, `FEE`, `INTEREST`, `ITEM`, `LIABILITY`.
+</ParamField>
+
+<ParamField body="date" type="string" required>
+  ISO 8601 date string. Must be after 1970-01-01.
+</ParamField>
+
+<ParamField body="symbol" type="string" required>
+  Ticker symbol or asset identifier.
+</ParamField>
+
+<ParamField body="currency" type="string" required>
+  ISO 4217 currency code for the transaction, e.g. `USD`.
+</ParamField>
+
+<ParamField body="quantity" type="number" required>
+  Number of units. Must be ≥ 0.
+</ParamField>
+
+<ParamField body="unitPrice" type="number" required>
+  Price per unit. Must be ≥ 0.
+</ParamField>
+
+<ParamField body="fee" type="number" required>
+  Transaction fee. Must be ≥ 0.
+</ParamField>
+
+<ParamField body="dataSource" type="string">
+  Data source enum value. Omit or use `MANUAL` for manually priced assets.
+</ParamField>
+
+<ParamField body="accountId" type="string">
+  UUID of the account to associate this activity with.
+</ParamField>
+
+<ParamField body="assetClass" type="string">
+  Override asset class. Enum: `COMMODITY`, `EQUITY`, `FIXED_INCOME`, `LIQUIDITY`, `REAL_ESTATE`.
+</ParamField>
+
+<ParamField body="assetSubClass" type="string">
+  Override asset sub-class. Enum: `BOND`, `CASH`, `COMMODITY`, `CRYPTOCURRENCY`, `ETF`, `MUTUALFUND`, `PRECIOUS_METAL`, `PRIVATE_EQUITY`, `STOCK`.
+</ParamField>
+
+<ParamField body="customCurrency" type="string">
+  Specify an alternative currency code. When set, overrides `currency` on save.
+</ParamField>
+
+<ParamField body="comment" type="string">
+  Optional freeform note for this activity.
+</ParamField>
+
+<ParamField body="tags" type="object[]">
+  Array of tag objects to assign. Each tag object requires an `id` field.
+</ParamField>
+
+<ParamField body="updateAccountBalance" type="boolean">
+  When `true`, automatically adjusts the linked account balance based on this activity.
+</ParamField>
+
+### Response
+
+Returns the created `Order` object with its generated `id` and `createdAt` timestamp.
+
+### Example
+
+<CodeGroup>
+
+```bash curl
+curl -X POST "https://yourdomain.com/api/v1/order" \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "BUY",
+    "date": "2024-03-15T00:00:00.000Z",
+    "symbol": "MSFT",
+    "dataSource": "YAHOO",
+    "currency": "USD",
+    "quantity": 10,
+    "unitPrice": 415.00,
+    "fee": 0
+  }'
+```
+
+</CodeGroup>
+
+---
+
+## PUT /api/v1/order/:id
+
+Updates an existing activity. Requires the `updateOrder` permission. Returns `403` if the activity belongs to a different user.
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  UUID of the activity to update.
+</ParamField>
+
+### Request body
+
+The body accepts the same fields as `POST /api/v1/order`, with the addition of:
+
+<ParamField body="id" type="string" required>
+  UUID of the activity (must match the path parameter).
+</ParamField>
+
+<ParamField body="dataSource" type="string" required>
+  Data source is required on update.
+</ParamField>
+
+### Error codes
+
+| Code | Meaning |
+|------|---------|
+| `403` | Activity not found or belongs to another user. |
+
+---
+
+## DELETE /api/v1/order/:id
+
+Deletes a single activity by UUID. Requires the `deleteOrder` permission.
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  UUID of the activity to delete.
+</ParamField>
+
+### Response
+
+Returns the deleted `Order` object.
+
+### Error codes
+
+| Code | Meaning |
+|------|---------|
+| `403` | Activity not found or belongs to another user. |
+
+---
+
+## DELETE /api/v1/order
+
+Deletes all activities matching the provided filters. Requires the `deleteOrder` permission.
+
+<Warning>
+  This is a bulk delete operation. All activities matching the supplied filters will be permanently removed. There is no confirmation step.
+</Warning>
+
+### Query parameters
+
+<ParamField query="accounts" type="string">
+  Filter by account IDs (comma-separated).
+</ParamField>
+
+<ParamField query="assetClasses" type="string">
+  Filter by asset class values (comma-separated).
+</ParamField>
+
+<ParamField query="dataSource" type="string">
+  Filter by data source.
+</ParamField>
+
+<ParamField query="symbol" type="string">
+  Filter to a single symbol.
+</ParamField>
+
+<ParamField query="tags" type="string">
+  Filter by tag IDs (comma-separated).
+</ParamField>
+
+### Response
+
+Returns the count of deleted records as a `number`.
+
+---
+
+## POST /api/v1/import
+
+Bulk-imports activities and optionally accounts. Requires the `createOrder` permission. Use the `dryRun` query parameter to validate the payload without persisting any data.
+
+<Note>
+  The maximum number of activities per import is controlled by the `MAX_ACTIVITIES_TO_IMPORT` server environment variable. Premium subscribers have no limit.
+</Note>
+
+### Query parameters
+
+<ParamField query="dryRun" type="string" default="false">
+  Set to `true` to validate the import payload without writing any data. Errors are still returned.
+</ParamField>
+
+### Request body
+
+```json
+{
+  "activities": [
+    {
+      "currency": "USD",
+      "dataSource": "YAHOO",
+      "date": "2021-09-15T00:00:00.000Z",
+      "fee": 19,
+      "quantity": 5,
+      "symbol": "MSFT",
+      "type": "BUY",
+      "unitPrice": 298.58
+    }
+  ],
+  "accounts": []
+}
+```
+
+<ParamField body="activities" type="object[]" required>
+  Array of activity objects to import. Each item follows the same schema as `POST /api/v1/order`.
+</ParamField>
+
+<ParamField body="accounts" type="object[]">
+  Optional array of account objects (with balance history) to create alongside the activities.
+</ParamField>
+
+### Response
+
+<ResponseField name="activities" type="object[]">
+  Array of the imported (or validated) activity objects.
+</ResponseField>
+
+### Error response
+
+When the payload is invalid or a duplicate activity is detected, the endpoint returns `400 Bad Request`:
+
+```json
+{
+  "error": "Bad Request",
+  "message": ["Activity already exists for MSFT on 2021-09-15"]
+}
+```
+
+### Example
+
+<CodeGroup>
+
+```bash curl
+curl -X POST "https://yourdomain.com/api/v1/import" \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "activities": [
+      {
+        "currency": "USD",
+        "dataSource": "YAHOO",
+        "date": "2021-09-15T00:00:00.000Z",
+        "fee": 19,
+        "quantity": 5,
+        "symbol": "MSFT",
+        "type": "BUY",
+        "unitPrice": 298.58
+      }
+    ]
+  }'
+```
+
+```bash curl (dry run)
+curl -X POST "https://yourdomain.com/api/v1/import?dryRun=true" \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "activities": [
+      {
+        "currency": "USD",
+        "dataSource": "YAHOO",
+        "date": "2021-09-15T00:00:00.000Z",
+        "fee": 19,
+        "quantity": 5,
+        "symbol": "MSFT",
+        "type": "BUY",
+        "unitPrice": 298.58
+      }
+    ]
+  }'
+```
+
+</CodeGroup>
+
+---
+
+## GET /api/v1/import/dividends/:dataSource/:symbol
+
+Fetches historical dividend data for a given symbol and returns them as importable activity objects. The dividends are not persisted — use `POST /api/v1/import` to save them.
+
+### Path parameters
+
+<ParamField path="dataSource" type="string" required>
+  Data source enum value.
+</ParamField>
+
+<ParamField path="symbol" type="string" required>
+  Ticker symbol to retrieve dividends for.
+</ParamField>
+
+### Response
+
+<ResponseField name="activities" type="object[]">
+  Array of `DIVIDEND` activity objects ready for import.
+</ResponseField>
+
+---
+
+## GET /api/v1/export
+
+Exports all activities for the authenticated user. Supports the same filter parameters as `GET /api/v1/order`. The response can be saved and reimported via `POST /api/v1/import`.
+
+### Query parameters
+
+<ParamField query="accounts" type="string">
+  Filter by account IDs (comma-separated).
+</ParamField>
+
+<ParamField query="activityIds" type="string">
+  Comma-separated list of specific activity UUIDs to export.
+</ParamField>
+
+<ParamField query="assetClasses" type="string">
+  Filter by asset class (comma-separated).
+</ParamField>
+
+<ParamField query="dataSource" type="string">
+  Filter by data source.
+</ParamField>
+
+<ParamField query="symbol" type="string">
+  Filter to a single symbol.
+</ParamField>
+
+<ParamField query="tags" type="string">
+  Filter by tag IDs (comma-separated).
+</ParamField>
+
+### Response
+
+Returns an `Export` object whose structure matches the import format, making round-trip backup and restore straightforward.
+
+### Example
+
+<CodeGroup>
+
+```bash curl
+curl -X GET "https://yourdomain.com/api/v1/export" \
+  -H "Authorization: Bearer <token>" \
+  -o ghostfolio-export.json
+```
+
+</CodeGroup>

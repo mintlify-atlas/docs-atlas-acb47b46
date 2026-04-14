@@ -1,0 +1,154 @@
+---
+title: "Authentication methods in Ghostfolio"
+description: "Learn how to authenticate with Ghostfolio using anonymous security tokens, Google OAuth, passkeys (WebAuthn), and API keys for programmatic access."
+---
+
+Ghostfolio supports several authentication methods so you can access your portfolio from the web app, mobile browser, or the REST API. The method you use depends on how your account was created and what level of access you need.
+
+## Authentication methods overview
+
+| Method | Best for | Requires setup |
+|---|---|---|
+| Anonymous token | Self-hosted API access, simple accounts | No |
+| Google OAuth | Web app sign-in with a Google account | Google account |
+| Passkeys (WebAuthn) | Passwordless sign-in on supported devices | Device enrollment |
+| API keys | Programmatic or scripting access | Generated in settings |
+
+---
+
+## Anonymous access
+
+When you create a Ghostfolio account without an external identity provider, your account is assigned a **security token** — a secret string that acts as your password. You exchange this token for a Bearer token (JWT) that you include in API requests.
+
+### Getting your Bearer token
+
+<Steps>
+  <Step title="Find your security token">
+    In the Ghostfolio web app, go to **My Ghostfolio → Security token** to view or regenerate your security token.
+  </Step>
+  <Step title="Exchange the token for a Bearer token">
+    Send a `POST` request to the anonymous auth endpoint with your security token in the request body:
+
+    ```bash cURL
+    curl -s -X POST http://localhost:3333/api/v1/auth/anonymous \
+      -H "Content-Type: application/json" \
+      -d '{"accessToken": "<YOUR_SECURITY_TOKEN>"}'
+    ```
+
+    The response contains your Bearer token:
+
+    ```json
+    {
+      "authToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    }
+    ```
+  </Step>
+  <Step title="Use the Bearer token in API requests">
+    Include the token in the `Authorization` header of every subsequent request:
+
+    ```bash cURL
+    curl -s http://localhost:3333/api/v1/portfolio/performance \
+      -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+  Bearer tokens expire. If you receive a `401 Unauthorized` response, repeat the token exchange step to get a fresh token.
+</Warning>
+
+<Note>
+  The legacy `GET /api/v1/auth/anonymous/<TOKEN>` endpoint is deprecated. Use the `POST` method shown above.
+</Note>
+
+---
+
+## Google OAuth
+
+If you sign in to Ghostfolio using **Sign in with Google**, your account is linked to your Google identity. No security token is used — Google handles authentication and Ghostfolio creates or looks up your account using the Google-provided identity.
+
+To sign in with Google, click **Sign in with Google** on the Ghostfolio login page. You will be redirected to Google's consent screen and then back to your Ghostfolio dashboard.
+
+<Info>
+  Google OAuth sign-in is available on the hosted Ghostfolio service and on self-hosted instances where Google OAuth has been configured by the administrator.
+</Info>
+
+To use the API with a Google account, sign in through the web app to obtain a session and use the Bearer token from the app's local storage, or generate an API key (see below).
+
+---
+
+## Passkeys (WebAuthn)
+
+Ghostfolio supports **passkeys** — platform authenticators such as Face ID, Touch ID, or Windows Hello — as a passwordless sign-in method. Passkeys use the WebAuthn standard and are tied to a specific device.
+
+### Enrolling a passkey
+
+<Steps>
+  <Step title="Sign in with your existing method">
+    Sign in to Ghostfolio using your current authentication method (anonymous token or Google).
+  </Step>
+  <Step title="Register your device">
+    Go to **My Ghostfolio → Security devices** and click **Register new device**. Your browser or operating system will prompt you to use your device's biometrics or PIN to register a passkey.
+  </Step>
+  <Step title="Sign in with your passkey">
+    On future sign-ins, select the passkey option and authenticate using your device's biometric or PIN prompt.
+  </Step>
+</Steps>
+
+<Note>
+  Passkeys are bound to the device they are registered on. If you lose access to a device, sign in with another method and remove the lost device from your security devices list.
+</Note>
+
+---
+
+## API keys
+
+API keys provide long-lived credentials for programmatic access without needing to exchange a security token each time. Each user account can have one active API key at a time — generating a new key invalidates the previous one.
+
+### Generating an API key
+
+<Steps>
+  <Step title="Open your account settings">
+    Go to **My Ghostfolio → API key** in the web app.
+  </Step>
+  <Step title="Generate a new key">
+    Click **Generate API key**. The key is displayed once — copy it immediately as it cannot be retrieved again.
+  </Step>
+  <Step title="Use the key in requests">
+    Pass the API key as the Bearer token in the `Authorization` header:
+
+    ```bash cURL
+    curl -s http://localhost:3333/api/v1/portfolio/performance \
+      -H "Authorization: Bearer gf_xxxx-xxxx-xxxx-xxxx-xxxx-xxxx-xxxx-xxxx"
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+  API keys grant the same level of access as your user account. Treat them as secrets and do not share them or commit them to version control.
+</Warning>
+
+---
+
+## User roles
+
+Every Ghostfolio account is assigned one of four roles. Your role determines what you can see and do within the application.
+
+| Role | Description |
+|---|---|
+| `USER` | Standard account with access to personal portfolio data |
+| `ADMIN` | Full access including system settings, user management, and data provider configuration. The first registered user on a self-hosted instance automatically receives this role. |
+| `DEMO` | Read-only access to a pre-populated demo portfolio. Used for the public live demo. |
+| `INACTIVE` | Account is disabled. Sign-in is rejected. |
+
+---
+
+## Authentication providers
+
+The `provider` field on a user account reflects how that account was originally created.
+
+| Provider | Description |
+|---|---|
+| `ANONYMOUS` | Account created with a security token, without an external identity provider |
+| `GOOGLE` | Account linked to a Google identity via OAuth |
+| `INTERNET_IDENTITY` | Account linked to an Internet Identity (ICP) principal |

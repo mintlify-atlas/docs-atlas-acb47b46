@@ -1,0 +1,322 @@
+---
+title: "User API — profile, settings, and API keys"
+description: "REST API endpoints for retrieving the current user profile, updating personal settings, creating anonymous users, and deleting your own account in Ghostfolio."
+---
+
+The user endpoints manage the authenticated user's profile and preferences. Settings such as base currency, view mode, date range defaults, and privacy flags are all controlled through `PUT /api/v1/user/setting`. All endpoints except `POST /api/v1/user` require a valid JWT Bearer token.
+
+---
+
+## User roles
+
+| Role | Description |
+|------|-------------|
+| `USER` | Standard authenticated user. |
+| `ADMIN` | Platform administrator with access to admin controls. |
+| `DEMO` | Demo user with limited write permissions. Can change benchmark and date range settings. |
+| `INACTIVE` | Account is deactivated and cannot log in. |
+
+## Auth providers
+
+| Provider | Description |
+|----------|-------------|
+| `ANONYMOUS` | Anonymous account identified by an access token. |
+| `GOOGLE` | Authenticated via Google OAuth. |
+| `INTERNET_IDENTITY` | Authenticated via Internet Identity. |
+
+---
+
+## GET /api/v1/user
+
+Returns the profile and settings of the currently authenticated user.
+
+### Headers
+
+<ParamField header="Accept-Language" type="string">
+  Preferred locale, e.g. `en-US`. Used to localize certain response fields. Only the first locale in the `Accept-Language` list is used.
+</ParamField>
+
+### Response
+
+<ResponseField name="id" type="string">
+  UUID of the user.
+</ResponseField>
+
+<ResponseField name="role" type="string">
+  User role: `USER`, `ADMIN`, `DEMO`, or `INACTIVE`.
+</ResponseField>
+
+<ResponseField name="provider" type="string">
+  Authentication provider: `ANONYMOUS`, `GOOGLE`, or `INTERNET_IDENTITY`.
+</ResponseField>
+
+<ResponseField name="permissions" type="string[]">
+  Array of permission strings granted to this user based on their role.
+</ResponseField>
+
+<ResponseField name="settings" type="object">
+  User preferences.
+  <Expandable title="settings properties">
+    <ResponseField name="baseCurrency" type="string">ISO 4217 base currency code for portfolio calculations.</ResponseField>
+    <ResponseField name="viewMode" type="string">View mode: `DEFAULT` or `ZEN`. In ZEN mode absolute monetary values are hidden.</ResponseField>
+    <ResponseField name="colorScheme" type="string">UI color scheme: `DARK` or `LIGHT`.</ResponseField>
+    <ResponseField name="dateRange" type="string">Default date range for portfolio views.</ResponseField>
+    <ResponseField name="language" type="string">Preferred UI language code.</ResponseField>
+    <ResponseField name="locale" type="string">Preferred locale string.</ResponseField>
+    <ResponseField name="isRestrictedView" type="boolean">When `true`, absolute values are hidden even in DEFAULT mode.</ResponseField>
+    <ResponseField name="isExperimentalFeatures" type="boolean">Whether experimental features are enabled for this user.</ResponseField>
+    <ResponseField name="emergencyFund" type="number">Target emergency fund amount in base currency.</ResponseField>
+    <ResponseField name="savingsRate" type="number">Target monthly savings rate in base currency.</ResponseField>
+    <ResponseField name="annualInterestRate" type="number">Annual interest rate used for projections.</ResponseField>
+    <ResponseField name="holdingsViewMode" type="string">Holdings view preference: `CHART` or `TABLE`.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="subscription" type="object">
+  Current subscription details (when subscription features are enabled on the platform).
+  <Expandable title="subscription properties">
+    <ResponseField name="type" type="string">Subscription tier, e.g. `Basic` or `Premium`.</ResponseField>
+    <ResponseField name="expiresAt" type="string">ISO 8601 expiry date of the subscription.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example
+
+<CodeGroup>
+
+```bash curl
+curl -X GET "https://yourdomain.com/api/v1/user" \
+  -H "Authorization: Bearer <token>"
+```
+
+</CodeGroup>
+
+---
+
+## POST /api/v1/user
+
+Creates a new anonymous user account. This is the signup endpoint and does **not** require authentication. The first user created on a fresh Ghostfolio instance is automatically assigned the `ADMIN` role; subsequent users receive the `USER` role.
+
+<Note>
+  User signup can be disabled by the platform administrator. If disabled, this endpoint returns `403 Forbidden`.
+</Note>
+
+### Response
+
+<ResponseField name="accessToken" type="string">
+  The plain-text access token for the new user. Store this securely — it cannot be retrieved again.
+</ResponseField>
+
+<ResponseField name="authToken" type="string">
+  A signed JWT for use as a Bearer token in subsequent requests.
+</ResponseField>
+
+<ResponseField name="role" type="string">
+  The role assigned to the new user: `ADMIN` (first user) or `USER`.
+</ResponseField>
+
+### Error codes
+
+| Code | Meaning |
+|------|---------|
+| `403` | User signup is disabled on this platform. |
+
+---
+
+## PUT /api/v1/user/setting
+
+Updates one or more settings for the authenticated user. Only the fields provided in the request body are applied; omitted fields retain their current values.
+
+<Note>
+  DEMO users may only update the `benchmark` and `dateRange` fields.
+</Note>
+
+### Request body
+
+All fields are optional. Provide only the settings you want to change.
+
+<ParamField body="baseCurrency" type="string">
+  ISO 4217 currency code to use as the portfolio base currency, e.g. `USD`. Changing this triggers a portfolio recalculation.
+</ParamField>
+
+<ParamField body="viewMode" type="string">
+  View mode. Values: `DEFAULT`, `ZEN`. ZEN mode hides all absolute monetary values.
+</ParamField>
+
+<ParamField body="colorScheme" type="string">
+  UI color scheme. Values: `DARK`, `LIGHT`.
+</ParamField>
+
+<ParamField body="dateRange" type="string">
+  Default date range for portfolio views. Values: `1d`, `wtd`, `mtd`, `ytd`, `1y`, `5y`, `max`, or a four-digit year.
+</ParamField>
+
+<ParamField body="holdingsViewMode" type="string">
+  How holdings are displayed. Values: `CHART`, `TABLE`.
+</ParamField>
+
+<ParamField body="language" type="string">
+  Preferred UI language code, e.g. `en`.
+</ParamField>
+
+<ParamField body="locale" type="string">
+  Preferred locale string, e.g. `en-US`.
+</ParamField>
+
+<ParamField body="benchmark" type="string">
+  Symbol to use as a performance benchmark.
+</ParamField>
+
+<ParamField body="isRestrictedView" type="boolean">
+  When `true`, absolute monetary values are redacted from portfolio responses.
+</ParamField>
+
+<ParamField body="isExperimentalFeatures" type="boolean">
+  Enable or disable experimental platform features.
+</ParamField>
+
+<ParamField body="emergencyFund" type="number">
+  Target emergency fund amount in base currency.
+</ParamField>
+
+<ParamField body="savingsRate" type="number">
+  Monthly savings rate target in base currency.
+</ParamField>
+
+<ParamField body="annualInterestRate" type="number">
+  Annual interest rate for projection calculations.
+</ParamField>
+
+<ParamField body="projectedTotalAmount" type="number">
+  Target total portfolio amount for projection purposes.
+</ParamField>
+
+<ParamField body="retirementDate" type="string">
+  ISO 8601 target retirement date.
+</ParamField>
+
+<ParamField body="xRayRules" type="object">
+  Configuration object for X-Ray portfolio analysis rule settings.
+</ParamField>
+
+<ParamField body="filters.accounts" type="string[]">
+  Default account filter for portfolio views.
+</ParamField>
+
+<ParamField body="filters.assetClasses" type="string[]">
+  Default asset class filter for portfolio views.
+</ParamField>
+
+<ParamField body="filters.dataSource" type="string">
+  Default data source filter for portfolio views.
+</ParamField>
+
+<ParamField body="filters.symbol" type="string">
+  Default symbol filter for portfolio views.
+</ParamField>
+
+<ParamField body="filters.tags" type="string[]">
+  Default tag filter for portfolio views.
+</ParamField>
+
+### Error codes
+
+| Code | Meaning |
+|------|---------|
+| `403` | User does not have permission to update settings (e.g. DEMO user attempting to change non-allowed fields). |
+
+### Example
+
+<CodeGroup>
+
+```bash curl
+curl -X PUT "https://yourdomain.com/api/v1/user/setting" \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "baseCurrency": "EUR",
+    "viewMode": "DEFAULT",
+    "colorScheme": "DARK"
+  }'
+```
+
+</CodeGroup>
+
+---
+
+## DELETE /api/v1/user
+
+Deletes the authenticated user's own account. Requires the `deleteOwnUser` permission and the user's plain-text access token for confirmation. This action is irreversible.
+
+<Warning>
+  Deleting your account permanently removes all associated data including activities, accounts, and settings. This cannot be undone.
+</Warning>
+
+### Request body
+
+<ParamField body="accessToken" type="string" required>
+  The user's plain-text access token (not the JWT). Used to confirm the deletion request.
+</ParamField>
+
+### Response
+
+Returns the deleted `User` object.
+
+### Error codes
+
+| Code | Meaning |
+|------|---------|
+| `403` | The provided access token is incorrect or does not match the authenticated user. |
+
+### Example
+
+<CodeGroup>
+
+```bash curl
+curl -X DELETE "https://yourdomain.com/api/v1/user" \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"accessToken": "your-plain-text-access-token"}'
+```
+
+</CodeGroup>
+
+---
+
+## DELETE /api/v1/user/:id
+
+Deletes another user's account. Requires the `deleteUser` permission (ADMIN role). An admin cannot delete their own account via this endpoint — use `DELETE /api/v1/user` instead.
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  UUID of the user to delete.
+</ParamField>
+
+### Response
+
+Returns the deleted `User` object.
+
+### Error codes
+
+| Code | Meaning |
+|------|---------|
+| `403` | The authenticated user is attempting to delete their own account via this endpoint. |
+
+---
+
+## POST /api/v1/user/:id/access-token
+
+Generates a new access token for a specific user. Requires the `accessAdminControl` permission (ADMIN role). The previous access token is invalidated.
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  UUID of the user for whom to generate a new access token.
+</ParamField>
+
+### Response
+
+<ResponseField name="accessToken" type="string">
+  The newly generated plain-text access token. This is shown only once.
+</ResponseField>

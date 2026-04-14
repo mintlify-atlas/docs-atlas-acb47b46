@@ -1,0 +1,210 @@
+---
+title: "Deploy Ghostfolio with Docker"
+description: "Run Ghostfolio on your own infrastructure using Docker Compose. Includes configuration, environment variables, and upgrade instructions."
+---
+
+Ghostfolio ships official container images for `linux/amd64`, `linux/arm/v7`, and `linux/arm64` on [Docker Hub](https://hub.docker.com/r/ghostfolio/ghostfolio). The easiest way to self-host is with the Docker Compose files included in the repository — they wire up Ghostfolio, PostgreSQL, and Redis with sane defaults and health checks already configured.
+
+<Info>
+  **Prerequisites**
+
+  - [Docker](https://www.docker.com/products/docker-desktop) installed on your host
+  - Basic familiarity with Docker Compose
+  - A clone of the Ghostfolio repository
+</Info>
+
+## Configure your environment
+
+Before starting any containers, copy the example environment file and fill in your values:
+
+```bash
+cp .env.example .env
+```
+
+The `.env.example` file ships with this content as a starting point:
+
+```bash .env.example
+COMPOSE_PROJECT_NAME=ghostfolio
+
+# CACHE
+REDIS_HOST=redis
+REDIS_PORT=6379
+REDIS_PASSWORD=<INSERT_REDIS_PASSWORD>
+
+# POSTGRES
+POSTGRES_DB=ghostfolio-db
+POSTGRES_USER=user
+POSTGRES_PASSWORD=<INSERT_POSTGRES_PASSWORD>
+
+# VARIOUS
+ACCESS_TOKEN_SALT=<INSERT_RANDOM_STRING>
+DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?connect_timeout=300&sslmode=prefer
+JWT_SECRET_KEY=<INSERT_RANDOM_STRING>
+```
+
+### Environment variables
+
+The table below documents all supported environment variables. Variables without a default value are required.
+
+| Name                       | Type                  | Default     | Description                                                                                                         |
+| -------------------------- | --------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------- |
+| `ACCESS_TOKEN_SALT`        | `string`              | —           | Random string used as a salt when hashing access tokens                                                             |
+| `API_KEY_COINGECKO_DEMO`   | `string` (optional)   | —           | CoinGecko Demo API key for cryptocurrency market data                                                               |
+| `API_KEY_COINGECKO_PRO`    | `string` (optional)   | —           | CoinGecko Pro API key for higher rate limits                                                                        |
+| `DATABASE_URL`             | `string`              | —           | PostgreSQL connection URL, e.g. `postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:5432/${POSTGRES_DB}?sslmode=prefer` |
+| `HOST`                     | `string` (optional)   | `0.0.0.0`  | Network interface the Ghostfolio server binds to                                                                    |
+| `JWT_SECRET_KEY`           | `string`              | —           | Random string used to sign JSON Web Tokens                                                                          |
+| `LOG_LEVELS`               | `string[]` (optional) | —           | Active logging levels, e.g. `["debug","error","log","warn"]`                                                        |
+| `PORT`                     | `number` (optional)   | `3333`      | Port the Ghostfolio server listens on                                                                               |
+| `POSTGRES_DB`              | `string`              | —           | Name of the PostgreSQL database                                                                                     |
+| `POSTGRES_PASSWORD`        | `string`              | —           | Password for the PostgreSQL user                                                                                    |
+| `POSTGRES_USER`            | `string`              | —           | Username for the PostgreSQL database                                                                                |
+| `REDIS_DB`                 | `number` (optional)   | `0`         | Redis database index                                                                                                |
+| `REDIS_HOST`               | `string`              | —           | Hostname where Redis is running                                                                                     |
+| `REDIS_PASSWORD`           | `string`              | —           | Password for the Redis instance                                                                                     |
+| `REDIS_PORT`               | `number`              | —           | Port where Redis is listening                                                                                       |
+| `REQUEST_TIMEOUT`          | `number` (optional)   | `2000`      | Timeout for outbound data provider requests, in milliseconds                                                        |
+
+<Tip>
+  Generate strong values for `ACCESS_TOKEN_SALT` and `JWT_SECRET_KEY` with a command like `openssl rand -hex 32`. Never reuse these values across environments.
+</Tip>
+
+## Start the application
+
+Choose whether to pull the pre-built image from Docker Hub or build the image locally from source.
+
+<Tabs>
+  <Tab title="Run from Docker Hub">
+    This approach pulls the latest official image from Docker Hub and is the recommended method for most deployments.
+
+    ```bash
+    docker compose -f docker/docker-compose.yml up -d
+    ```
+
+    The `docker-compose.yml` file starts three services:
+
+    - **ghostfolio** — the application server on port `3333`
+    - **postgres** — PostgreSQL 15 with a persistent named volume
+    - **redis** — Redis with password authentication
+
+    Ghostfolio waits for both PostgreSQL and Redis health checks to pass before starting. On first boot, the entrypoint runs database migrations and seeds automatically.
+  </Tab>
+  <Tab title="Build and run">
+    Use this approach if you want to build the Docker image from your local source, for example when testing a custom patch or working from a fork.
+
+    ```bash
+    docker compose -f docker/docker-compose.build.yml build
+    docker compose -f docker/docker-compose.build.yml up -d
+    ```
+
+    The build Compose file extends the base `docker-compose.yml` services and tags the resulting image as `ghostfolio/ghostfolio:local`.
+  </Tab>
+</Tabs>
+
+## First-time setup
+
+<Steps>
+  <Step title="Confirm services are running">
+    Check that all containers started successfully:
+
+    ```bash
+    docker compose -f docker/docker-compose.yml ps
+    ```
+
+    All three services — `ghostfolio`, `gf-postgres`, and `gf-redis` — should show a `healthy` status.
+  </Step>
+
+  <Step title="Open the application">
+    Navigate to [http://localhost:3333](http://localhost:3333) in your browser (or replace `localhost` with your server's IP address or hostname).
+  </Step>
+
+  <Step title="Create your admin account">
+    Click **Get Started** and register. The first user to register on a new instance is automatically assigned the `ADMIN` role, which grants access to the admin panel, system settings, and user management.
+
+    <Warning>
+      Register your admin account immediately after deployment. Any user who registers before you will become the administrator.
+    </Warning>
+  </Step>
+</Steps>
+
+## Upgrade to a new version
+
+<Steps>
+  <Step title="Update the Docker image">
+    <Tabs>
+      <Tab title="Pull latest tag">
+        If your `docker-compose.yml` uses `ghostfolio/ghostfolio:latest`, pull the new image:
+
+        ```bash
+        docker compose -f docker/docker-compose.yml pull
+        ```
+      </Tab>
+      <Tab title="Pin a specific version">
+        Open `docker/docker-compose.yml` and update the image tag on the `ghostfolio` service:
+
+        ```yaml
+        image: docker.io/ghostfolio/ghostfolio:2.x.x
+        ```
+
+        Then pull the updated image:
+
+        ```bash
+        docker compose -f docker/docker-compose.yml pull
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Restart the containers">
+    ```bash
+    docker compose -f docker/docker-compose.yml up -d
+    ```
+
+    The container runs any pending database schema migrations automatically during startup. No manual migration step is needed.
+  </Step>
+</Steps>
+
+## Community home server integrations
+
+The Ghostfolio community maintains ready-to-use packages for several popular home server platforms. These are not officially supported by the Ghostfolio project, but are actively maintained by community contributors.
+
+<CardGroup cols={2}>
+  <Card title="CasaOS" icon="house" href="https://github.com/bigbeartechworld/big-bear-casaos">
+    Install via the Big Bear CasaOS app store
+  </Card>
+  <Card title="Home Assistant" icon="house-signal" href="https://github.com/lildude/ha-addon-ghostfolio">
+    Run as a Home Assistant add-on
+  </Card>
+  <Card title="Runtipi" icon="server" href="https://www.runtipi.io/docs/apps-available">
+    Available in the Runtipi app store
+  </Card>
+  <Card title="TrueCharts" icon="chart-bar" href="https://truecharts.org/charts/stable/ghostfolio">
+    Deploy on TrueNAS SCALE via TrueCharts
+  </Card>
+  <Card title="Umbrel" icon="umbrella" href="https://apps.umbrel.com/app/ghostfolio">
+    Install from the Umbrel App Store
+  </Card>
+  <Card title="Unraid" icon="circle-nodes" href="https://unraid.net/community/apps?q=ghostfolio">
+    Available in the Unraid Community Applications
+  </Card>
+</CardGroup>
+
+## Health check
+
+Ghostfolio exposes a health endpoint you can use to verify the application is running:
+
+```bash
+curl http://localhost:3333/api/v1/health
+```
+
+A healthy instance returns:
+
+```json
+{
+  "status": "OK"
+}
+```
+
+<Note>
+  The health check endpoint does not require a Bearer Token. Docker Compose uses it internally to determine when the `ghostfolio` service is ready to accept traffic.
+</Note>
